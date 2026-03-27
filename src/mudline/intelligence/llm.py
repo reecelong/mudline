@@ -10,17 +10,99 @@ can work with any LLM backend without coupling to a specific provider.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
+import anthropic
 import httpx
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from mudline.exceptions import LLMError
 
 logger = logging.getLogger(__name__)
+
+
+async def _retry_with_backoff(
+    fn: Any,
+    *,
+    is_retryable: Any,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    operation_name: str = "LLM call",
+) -> Any:
+    """Retry an async callable with exponential backoff on transient errors.
+
+    Args:
+        fn: Zero-argument async callable to invoke.
+        is_retryable: Predicate that takes an exception and returns True if
+            the call should be retried.
+        max_retries: Maximum number of retry attempts (total calls = max_retries + 1).
+        base_delay: Base delay in seconds; doubles each retry (1s, 2s, 4s, ...).
+        operation_name: Label for log messages.
+
+    Returns:
+        The return value of *fn* on success.
+
+    Raises:
+        The original exception after all retries are exhausted.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            return await fn()
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= max_retries or not is_retryable(exc):
+                raise
+            delay = base_delay * (2 ** attempt)
+            logger.warning(
+                "%s failed (attempt %d/%d), retrying in %.1fs: %s",
+                operation_name,
+                attempt + 1,
+                max_retries + 1,
+                delay,
+                exc,
+            )
+            await asyncio.sleep(delay)
+
+    # Unreachable, but satisfies the type checker.
+    raise last_exc  # type: ignore[misc]
+
+
+def _is_anthropic_retryable(exc: Exception) -> bool:
+    """Return True if an Anthropic SDK exception is transient and worth retrying."""
+    if isinstance(exc, anthropic.RateLimitError):
+        return True
+    if isinstance(exc, anthropic.APIConnectionError):
+        return True
+    if isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500:
+        return True
+    return False
+
+
+def _is_ollama_retryable(exc: Exception) -> bool:
+    """Return True if an Ollama/httpx exception is transient and worth retrying."""
+    if isinstance(exc, httpx.RequestError):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+        return True
+    return False
+
+
+def _is_claude_code_retryable(exc: Exception) -> bool:
+    """Return True if a ClaudeCode CLI error is transient and worth retrying."""
+    if isinstance(exc, LLMError):
+        msg = str(exc)
+        if "not found" in msg:
+            return False
+        if re.search(r"exit \d+", msg):
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -129,7 +211,7 @@ class AnthropicProvider:
             api_key = os.environ.get("ANTHROPIC_API_KEY")
             if not api_key:
                 raise LLMError("ANTHROPIC_API_KEY environment variable not set")
-        self.client = Anthropic(api_key=api_key)
+        self.client = AsyncAnthropic(api_key=api_key)
 
     async def complete(
         self,
@@ -148,9 +230,15 @@ class AnthropicProvider:
         Raises:
             LLMError: If the API call fails.
         """
-        try:
-            # Convert Message dataclasses to dict format for Anthropic SDK
-            api_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
+        async def _call() -> LLMResponse:
+            # Separate system messages from user/assistant messages
+            system_parts = [msg.content for msg in messages if msg.role == "system"]
+            system_text = "\n".join(system_parts) if system_parts else None
+            api_messages = [
+                {"role": msg.role, "content": msg.content}
+                for msg in messages
+                if msg.role != "system"
+            ]
 
             # Convert ToolDef to Anthropic tool format
             api_tools = None
@@ -164,13 +252,19 @@ class AnthropicProvider:
                     for tool in tools
                 ]
 
+            # Build kwargs for Anthropic API call
+            create_kwargs: dict[str, Any] = {
+                "model": self.model,
+                "max_tokens": 4096,
+                "messages": api_messages,
+            }
+            if system_text:
+                create_kwargs["system"] = system_text
+            if api_tools:
+                create_kwargs["tools"] = api_tools
+
             # Call Anthropic API
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=4096,
-                tools=api_tools,
-                messages=api_messages,
-            )
+            response = await self.client.messages.create(**create_kwargs)
 
             # Extract content and tool calls from response
             content = ""
@@ -207,7 +301,15 @@ class AnthropicProvider:
                 usage=usage,
             )
 
+        try:
+            return await _retry_with_backoff(
+                _call,
+                is_retryable=_is_anthropic_retryable,
+                operation_name="Anthropic API",
+            )
         except Exception as e:
+            if isinstance(e, LLMError):
+                raise
             logger.error(f"Anthropic API error: {e}")
             raise LLMError(f"Anthropic API failed: {e}") from e
 
@@ -250,7 +352,7 @@ class OllamaProvider:
         Raises:
             LLMError: If the HTTP request fails.
         """
-        try:
+        async def _call() -> LLMResponse:
             # Convert Message dataclasses to dict format
             api_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
 
@@ -299,11 +401,17 @@ class OllamaProvider:
                         for tool_call in message["tool_calls"]:
                             if tool_call.get("type") == "function":
                                 func = tool_call.get("function", {})
+                                raw_args = func.get("arguments", {})
+                                if isinstance(raw_args, str):
+                                    try:
+                                        raw_args = json.loads(raw_args)
+                                    except (json.JSONDecodeError, TypeError):
+                                        raw_args = {}
                                 tool_calls.append(
                                     ToolCall(
                                         id=tool_call.get("id", ""),
                                         name=func.get("name", ""),
-                                        arguments=func.get("arguments", {}),
+                                        arguments=raw_args,
                                     )
                                 )
 
@@ -328,10 +436,18 @@ class OllamaProvider:
                 usage=usage,
             )
 
+        try:
+            return await _retry_with_backoff(
+                _call,
+                is_retryable=_is_ollama_retryable,
+                operation_name="Ollama API",
+            )
         except httpx.RequestError as e:
             logger.error(f"Ollama HTTP request failed: {e}")
             raise LLMError(f"Ollama service unavailable: {e}") from e
         except Exception as e:
+            if isinstance(e, LLMError):
+                raise
             logger.error(f"Ollama response parsing error: {e}")
             raise LLMError(f"Ollama response parsing failed: {e}") from e
 
@@ -359,6 +475,56 @@ class ClaudeCodeProvider:
         """
         self.model = model
 
+    @staticmethod
+    def _extract_tool_calls(text: str) -> tuple[list[ToolCall], str]:
+        """Extract tool call JSON objects from free-form response text.
+
+        Scans for JSON objects matching {"tool": "...", "arguments": {...}}
+        embedded in the response. This is best-effort — the model may
+        format calls slightly differently, but the regex covers the
+        common case from our prompt instructions.
+
+        Args:
+            text: Raw response text from the CLI.
+
+        Returns:
+            Tuple of (parsed ToolCall list, cleaned text with JSON removed).
+        """
+        # Match JSON-like blocks: outermost { ... } allowing nested braces
+        json_pattern = re.compile(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}")
+        tool_calls: list[ToolCall] = []
+        spans_to_remove: list[tuple[int, int]] = []
+
+        for match in json_pattern.finditer(text):
+            try:
+                obj = json.loads(match.group())
+            except (json.JSONDecodeError, ValueError):
+                continue
+
+            if not isinstance(obj, dict):
+                continue
+            if "tool" not in obj or "arguments" not in obj:
+                continue
+            if not isinstance(obj["arguments"], dict):
+                continue
+
+            tool_calls.append(
+                ToolCall(
+                    id=f"cc-{len(tool_calls)}",
+                    name=obj["tool"],
+                    arguments=obj["arguments"],
+                )
+            )
+            spans_to_remove.append(match.span())
+
+        # Strip matched JSON blocks from the content (reverse order to keep indices valid)
+        cleaned = text
+        for start, end in reversed(spans_to_remove):
+            cleaned = cleaned[:start] + cleaned[end:]
+        cleaned = cleaned.strip()
+
+        return tool_calls, cleaned
+
     async def complete(
         self,
         messages: list[Message],
@@ -366,23 +532,20 @@ class ClaudeCodeProvider:
     ) -> LLMResponse:
         """Generate a completion by shelling out to claude CLI.
 
-        Tool use is not supported via CLI — the full prompt (system + messages)
-        is concatenated and sent as a single prompt. The planner's agentic loop
-        still works because tool calls are expressed in the prompt text and
-        parsed from the response.
+        Tool descriptions are appended to the prompt so the model can respond
+        with JSON tool calls. The response text is then scanned for those
+        JSON objects and converted into proper ToolCall instances.
 
         Args:
             messages: Conversation history.
-            tools: Ignored (CLI doesn't support function calling directly).
+            tools: Optional list of tools the model can call via text.
 
         Returns:
-            LLMResponse with the CLI output.
+            LLMResponse with the CLI output and any parsed tool calls.
 
         Raises:
             LLMError: If the CLI invocation fails.
         """
-        import asyncio
-        import json as _json
         import shutil
 
         claude_bin = shutil.which("claude")
@@ -412,7 +575,7 @@ class ClaudeCodeProvider:
                 "if you need to use them]\n" + tool_desc
             )
 
-        try:
+        async def _call() -> LLMResponse:
             cmd = [
                 claude_bin, "-p", prompt,
                 "--output-format", "json",
@@ -432,7 +595,7 @@ class ClaudeCodeProvider:
                 err = stderr.decode().strip() if stderr else "unknown error"
                 raise LLMError(f"claude CLI failed (exit {proc.returncode}): {err}")
 
-            data = _json.loads(stdout.decode())
+            data = json.loads(stdout.decode())
             content = data.get("result", "")
             usage_data = data.get("usage", {})
 
@@ -441,19 +604,32 @@ class ClaudeCodeProvider:
                 "output_tokens": usage_data.get("output_tokens", 0),
             }
 
+            # Parse tool calls from the response text if tools were provided
+            tool_calls: list[ToolCall] = []
+            if tools and content:
+                tool_calls, content = self._extract_tool_calls(content)
+
             logger.debug(
-                "Claude Code completion: model=%s, input=%d, output=%d",
+                "Claude Code completion: model=%s, input=%d, output=%d, tool_calls=%d",
                 self.model,
                 usage.get("input_tokens", 0),
                 usage.get("output_tokens", 0),
+                len(tool_calls),
             )
 
             return LLMResponse(
                 content=content,
                 model=f"claude-code:{self.model}",
+                tool_calls=tool_calls,
                 usage=usage,
             )
 
+        try:
+            return await _retry_with_backoff(
+                _call,
+                is_retryable=_is_claude_code_retryable,
+                operation_name="Claude Code CLI",
+            )
         except LLMError:
             raise
         except TimeoutError as e:
