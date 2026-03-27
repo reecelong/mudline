@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mudline"
+version = "0.1.0"
+description = "AI-powered personal data layer over iOS backups"
+requires-python = ">=3.12"
+dependencies = [
+    # Foundation
+    "iOSbackup>=0.9",
+    # Index
+    "chromadb>=0.5",
+    "sentence-transformers>=3.0",
+    # Intelligence
+    "anthropic>=0.40",
+    "httpx>=0.27",
+    # Interface
+    "typer>=0.12",
+    "python-dotenv>=1.0",
+    "rich>=13.0",
+    "textual>=0.80",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    # Extraction
+    "protobuf>=5.0",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+media = [
+    "open-clip-torch>=2.26",
+]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[project.scripts]
+mudline = "mudline.cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mudline"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
