@@ -5,8 +5,7 @@ Targeted test: finds a specific contact's handles in AddressBook, then
 extracts only their message thread from sms.db. Keeps memory usage low.
 
 Usage:
-    python smoke_test.py
-    python smoke_test.py "Finnegan Long"
+    python smoke_test.py "First Last"
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from mudline.foundation.discovery import BackupDiscovery
 from mudline.foundation.manifest import ManifestResolver
 
 COCOA_EPOCH = datetime(2001, 1, 1)
-TARGET_CONTACT = "Finnegan Long"
+TARGET_CONTACT = ""  # Pass as CLI argument: python smoke_test.py "First Last"
 
 
 def cocoa_ns_to_datetime(cocoa_ns: int) -> datetime:
@@ -152,7 +151,10 @@ def extract_messages_for_handles(
 
 
 def main() -> int:
-    target = sys.argv[1] if len(sys.argv) > 1 else TARGET_CONTACT
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} 'First Last'")
+        return 1
+    target = sys.argv[1]
     parts = target.rsplit(" ", 1)
     if len(parts) != 2:
         print(f"Usage: {sys.argv[0]} 'First Last'")

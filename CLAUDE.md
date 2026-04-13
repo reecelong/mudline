@@ -20,25 +20,21 @@ Foundation (ManifestResolver → raw iOS backup files)
 
 ## Core Contracts (DO NOT MODIFY WITHOUT REVIEW)
 
-The shared interfaces in `src/mudline/models/` are the synchronization point between all agents. Every extractor produces `Document` objects. Every retrieval goes through the `Retriever` interface. Changing these types requires updating all downstream consumers.
+The shared interfaces in `src/mudline/models/` are the synchronization point between all layers. Every extractor produces `Document` objects. Every retrieval goes through the `Retriever` interface. Changing these types requires updating all downstream consumers.
 
 - `src/mudline/models/document.py` — Document, Source, Attachment
 - `src/mudline/models/extractor.py` — Extractor protocol
 - `src/mudline/models/retriever.py` — Retriever interface, Filters, Result
 
-## Agent Roles & Ownership
+## Package Ownership
 
-| Agent | Owns | Package |
-|-------|------|---------|
-| Foundation | Backup discovery, ManifestResolver, encryption | `mudline.foundation` |
-| Extraction | All domain extractors (messages, photos, etc.) | `mudline.extractors` |
-| Index | Ingest pipeline, vector store, structured store, hybrid retriever | `mudline.index` |
-| Intelligence | Query planner, synthesizer, LLM provider, conversation memory | `mudline.intelligence` |
-| Interface | CLI, FastAPI server, MCP wrapper | `mudline.cli`, `mudline.api` |
-
-## Task IDs
-
-Tasks are prefixed by agent: F (Foundation), E (Extraction), I (Index), Q (Intelligence), C (Interface). See `TASKS.md` for the full breakdown with dependencies and acceptance criteria.
+| Package | Responsibility |
+|---------|---------------|
+| `mudline.foundation` | Backup discovery, ManifestResolver, encryption |
+| `mudline.extractors` | Domain-specific parsers (messages, photos, contacts, etc.) |
+| `mudline.index` | Ingest pipeline, vector store, structured store, hybrid retriever |
+| `mudline.intelligence` | Query planner, synthesizer, LLM provider, conversation memory |
+| `mudline.cli`, `mudline.api` | CLI and REST API interfaces |
 
 ## Code Conventions
 
@@ -73,6 +69,6 @@ Dev: `ruff`, `mypy`, `pytest`, `pytest-asyncio`
 - Notes use **protobuf-encoded rich text** in the `ZICCLOUDSYNCINGOBJECT` column — not plain text
 - The LLM provider abstraction must support both cloud APIs (Anthropic, OpenAI-compat) and local Ollama
 
-## Branch Strategy
+## Contributing
 
-Each task gets a branch: `agent/<role>/<task-id>` (e.g., `agent/extraction/E-01`). PRs require: all tests pass, new tests for the task, no cross-domain imports except through `mudline.models`.
+See `CONTRIBUTING.md` for development setup, code style, and PR guidelines. Key rule: no cross-layer imports except through `mudline.models`.
