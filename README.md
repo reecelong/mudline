@@ -2,7 +2,7 @@
 
 > *Named for the boundary where Charleston's tidal rivers meet the pluff mud — where everything settles, layers, and stays.*
 
-The Siri Apple never built. AI-powered natural language access to your iOS backup data — messages, photos, contacts, notes, calendar, call history, and more.
+AI-powered natural language access to your iOS backup data — messages, photos, contacts, notes, calendar, call history, and more.
 
 ## What It Does
 

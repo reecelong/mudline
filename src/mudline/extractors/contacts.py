@@ -18,7 +18,7 @@ from mudline.models.document import Document, DocumentType, Source
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mudline.foundation.manifest import ManifestResolver
+    from mudline.models import ResourceResolver
 
 logger = logging.getLogger(__name__)
 
@@ -48,22 +48,22 @@ class ContactExtractor:
         """Return the document type."""
         return "contact"
 
-    def can_extract(self, resolver: ManifestResolver) -> bool:
+    def can_extract(self, resolver: ResourceResolver) -> bool:
         """Check if the AddressBook database exists in the backup.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             True if AddressBook.sqlitedb exists, False otherwise.
         """
         return resolver.file_exists(self.domain, "Library/AddressBook/AddressBook.sqlitedb")
 
-    def extract(self, resolver: ManifestResolver) -> Iterator[Document]:
+    def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all contacts from AddressBook.sqlitedb.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Yields:
             Document objects for each contact found.
@@ -193,11 +193,11 @@ class ContactExtractor:
 
             yield doc
 
-    def get_handle_map(self, resolver: ManifestResolver) -> dict[str, str]:
+    def get_handle_map(self, resolver: ResourceResolver) -> dict[str, str]:
         """Build a map of each phone/email → contact display name.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             Dictionary mapping each phone/email handle to "First Last" display name.
@@ -265,11 +265,11 @@ class ContactExtractor:
 
         return handle_map
 
-    def _get_backup_timestamp(self, resolver: ManifestResolver) -> datetime:
+    def _get_backup_timestamp(self, resolver: ResourceResolver) -> datetime:
         """Extract backup timestamp from Info.plist.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             The backup creation timestamp.

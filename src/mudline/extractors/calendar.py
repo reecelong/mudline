@@ -17,7 +17,7 @@ from mudline.models.document import Document, DocumentType, Source
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mudline.foundation.manifest import ManifestResolver
+    from mudline.models import ResourceResolver
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +49,11 @@ class CalendarExtractor:
         """Document type produced by this extractor."""
         return DocumentType.CALENDAR.value
 
-    def can_extract(self, resolver: ManifestResolver) -> bool:
+    def can_extract(self, resolver: ResourceResolver) -> bool:
         """Check if the Calendar database exists in the backup.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             True if Calendar.sqlitedb exists, False otherwise.
@@ -62,11 +62,11 @@ class CalendarExtractor:
             self.domain, "Library/Calendar/Calendar.sqlitedb"
         )
 
-    def extract(self, resolver: ManifestResolver) -> Iterator[Document]:
+    def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all calendar events from the Calendar database.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Yields:
             Document objects for each calendar event.
@@ -271,22 +271,22 @@ class CalendarExtractor:
         logger.debug("No recurrence table found in Calendar database")
         return recurrence_map
 
-    def _build_backup_id(self, resolver: ManifestResolver) -> str:
+    def _build_backup_id(self, resolver: ResourceResolver) -> str:
         """Build a backup ID from backup path.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             A string identifier for the backup.
         """
         return resolver.backup_path.name
 
-    def _get_backup_timestamp(self, resolver: ManifestResolver) -> datetime:
+    def _get_backup_timestamp(self, resolver: ResourceResolver) -> datetime:
         """Get the backup timestamp from Info.plist.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             Backup timestamp, or current time if unavailable.

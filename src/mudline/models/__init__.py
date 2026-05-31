@@ -2,6 +2,7 @@
 
 from mudline.models.document import Attachment, Document, DocumentType, Source
 from mudline.models.extractor import Extractor
+from mudline.models.resolver import ResourceResolver
 from mudline.models.retriever import Filters, Result, Retriever
 
 __all__ = [
@@ -10,6 +11,7 @@ __all__ = [
     "DocumentType",
     "Extractor",
     "Filters",
+    "ResourceResolver",
     "Result",
     "Retriever",
     "Source",

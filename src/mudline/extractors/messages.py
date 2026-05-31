@@ -25,7 +25,7 @@ from mudline.models.document import Attachment, Document, DocumentType, Source
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mudline.foundation.manifest import ManifestResolver  # noqa: F401
+    from mudline.models import ResourceResolver  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -58,22 +58,22 @@ class MessageExtractor:
         """Document type produced by this extractor."""
         return DocumentType.MESSAGE.value
 
-    def can_extract(self, resolver: ManifestResolver) -> bool:
+    def can_extract(self, resolver: ResourceResolver) -> bool:
         """Check if the SMS database exists in the backup.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             True if sms.db exists, False otherwise.
         """
         return resolver.file_exists(self.domain, "Library/SMS/sms.db")
 
-    def extract(self, resolver: ManifestResolver) -> Iterator[Document]:
+    def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all messages from the SMS database.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Yields:
             Document objects for each message.
@@ -319,11 +319,11 @@ class MessageExtractor:
             logger.warning("Failed to get chat participants for chat %d: %s", chat_id, e)
         return sorted(participants)
 
-    def _build_backup_id(self, resolver: ManifestResolver) -> str:
+    def _build_backup_id(self, resolver: ResourceResolver) -> str:
         """Build a backup ID from backup path.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             A string identifier for the backup.
@@ -332,11 +332,11 @@ class MessageExtractor:
         backup_name = resolver.backup_path.name
         return str(backup_name)
 
-    def _get_backup_timestamp(self, resolver: ManifestResolver) -> datetime:
+    def _get_backup_timestamp(self, resolver: ResourceResolver) -> datetime:
         """Get the backup timestamp from Info.plist or Status.plist.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             Backup timestamp, or current time if unavailable.

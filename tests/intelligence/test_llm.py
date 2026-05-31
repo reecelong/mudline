@@ -11,6 +11,7 @@ Tests verify:
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,6 +25,7 @@ from mudline.intelligence.llm import (
     OllamaProvider,
     ToolCall,
     ToolDef,
+    VertexAIProvider,
     create_provider,
 )
 
@@ -326,6 +328,112 @@ class TestOllamaProvider:
         provider.client.aclose.assert_called_once()
 
 
+class TestVertexAIProvider:
+    """Test the Vertex AI (Gemini) provider."""
+
+    @staticmethod
+    def _make_provider() -> VertexAIProvider:
+        """Construct a provider with the genai client patched out (no ADC needed)."""
+        with patch("google.genai.Client", return_value=MagicMock()):
+            return VertexAIProvider(project="test-proj", location="us-central1")
+
+    def test_init_uses_env_and_vertex_mode(self) -> None:
+        """Project/location fall back to env; the client runs in Vertex mode."""
+        with (
+            patch("google.genai.Client") as mock_client_cls,
+            patch.dict("os.environ", {"GOOGLE_CLOUD_PROJECT": "env-proj"}, clear=True),
+        ):
+            VertexAIProvider()
+            _, kwargs = mock_client_cls.call_args
+            assert kwargs["vertexai"] is True
+            assert kwargs["project"] == "env-proj"
+            assert kwargs["location"] == "us-central1"
+
+    def test_missing_extra_raises_llm_error(self) -> None:
+        """A clear LLMError is raised when the google-genai SDK is unavailable."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            fromlist = args[2] if len(args) > 2 else (kwargs.get("fromlist") or ())
+            if name == "google.genai" or (name == "google" and "genai" in fromlist):
+                raise ImportError("simulated missing google-genai")
+            return real_import(name, *args, **kwargs)
+
+        with (
+            patch.object(builtins, "__import__", side_effect=fake_import),
+            pytest.raises(LLMError, match="vertex"),
+        ):
+            VertexAIProvider()
+
+    @pytest.mark.asyncio
+    async def test_complete_extracts_text_and_tool_calls(self) -> None:
+        """Text + function calls are extracted; system msg -> system_instruction."""
+        provider = self._make_provider()
+
+        text_part = MagicMock()
+        text_part.text = "Here is the answer."
+        text_part.function_call = None
+
+        func_call = MagicMock()
+        func_call.id = None
+        func_call.name = "search_messages"
+        func_call.args = {"query": "plumber"}
+        call_part = MagicMock()
+        call_part.text = None
+        call_part.function_call = func_call
+
+        candidate = MagicMock()
+        candidate.content.parts = [text_part, call_part]
+
+        response = MagicMock()
+        response.candidates = [candidate]
+        response.usage_metadata.prompt_token_count = 12
+        response.usage_metadata.candidates_token_count = 8
+
+        provider.client.aio.models.generate_content = AsyncMock(return_value=response)
+
+        result = await provider.complete(
+            [
+                Message(role="system", content="be helpful"),
+                Message(role="user", content="who fixed the sink?"),
+            ],
+            tools=[
+                ToolDef(
+                    name="search_messages",
+                    description="search messages",
+                    parameters={
+                        "type": "object",
+                        "properties": {"query": {"type": "string"}},
+                    },
+                )
+            ],
+        )
+
+        assert result.content == "Here is the answer."
+        assert result.model == "gemini-2.5-pro"
+        assert len(result.tool_calls) == 1
+        assert result.tool_calls[0].name == "search_messages"
+        assert result.tool_calls[0].arguments == {"query": "plumber"}
+        assert result.tool_calls[0].id == "vertex-0"
+        assert result.usage == {"input_tokens": 12, "output_tokens": 8}
+
+        _, kwargs = provider.client.aio.models.generate_content.call_args
+        assert kwargs["config"].system_instruction == "be helpful"
+        # The system message is not part of the conversation contents.
+        assert len(kwargs["contents"]) == 1
+        assert kwargs["contents"][0].role == "user"
+
+    @pytest.mark.asyncio
+    async def test_complete_wraps_errors_in_llm_error(self) -> None:
+        """Underlying SDK errors are surfaced as LLMError."""
+        provider = self._make_provider()
+        provider.client.aio.models.generate_content = AsyncMock(side_effect=RuntimeError("boom"))
+        with pytest.raises(LLMError, match="Vertex AI failed"):
+            await provider.complete([Message(role="user", content="hi")])
+
+
 class TestFactoryFunction:
     """Test create_provider factory function."""
 
@@ -342,6 +450,17 @@ class TestFactoryFunction:
         assert isinstance(provider, OllamaProvider)
         assert provider.base_url == "http://custom:8000"
         assert provider.model == "custom-model"
+
+    def test_create_vertex_provider(self) -> None:
+        """Test creating the Vertex provider via factory, including the alias."""
+        with patch("google.genai.Client", return_value=MagicMock()):
+            provider = create_provider("vertex", project="p", location="us-central1")
+            assert isinstance(provider, VertexAIProvider)
+            assert provider.model == "gemini-2.5-pro"
+
+            aliased = create_provider("gemini", model="gemini-2.5-flash")
+            assert isinstance(aliased, VertexAIProvider)
+            assert aliased.model == "gemini-2.5-flash"
 
     def test_create_unknown_provider(self) -> None:
         """Test factory fails for unknown provider."""
@@ -373,5 +492,13 @@ class TestProtocolCompliance:
     async def test_ollama_protocol_compliance(self) -> None:
         """Test OllamaProvider has required protocol methods."""
         provider = OllamaProvider()
+        assert hasattr(provider, "complete")
+        assert callable(provider.complete)
+
+    @pytest.mark.asyncio
+    async def test_vertex_protocol_compliance(self) -> None:
+        """Test VertexAIProvider has required protocol methods."""
+        with patch("google.genai.Client", return_value=MagicMock()):
+            provider = VertexAIProvider(project="p")
         assert hasattr(provider, "complete")
         assert callable(provider.complete)

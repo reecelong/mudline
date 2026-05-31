@@ -22,12 +22,10 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    # Foundation
-    "iOSbackup>=0.9",
-    # Index
+    # Engine: index (vector + structured retrieval)
     "chromadb>=0.5",
     "sentence-transformers>=3.0",
-    # Intelligence
+    # Engine: intelligence (LLM provider abstraction)
     "anthropic>=0.40",
     "httpx>=0.27",
     # Interface
@@ -37,20 +35,31 @@ dependencies = [
     "textual>=0.80",
     "fastapi>=0.115",
     "uvicorn>=0.32",
-    # Extraction
-    "protobuf>=5.0",
-    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]
+# iOS backup discovery and extraction. Required to ingest real iOS backups;
+# the engine (models + index + intelligence.llm) does not need these.
+ios = [
+    "iOSbackup>=0.9",
+    "protobuf>=5.0",
+    "Pillow>=10.0",
+]
+# CLIP image embeddings for media search.
 media = [
     "open-clip-torch>=2.26",
+    "Pillow>=10.0",
+]
+# Google Vertex AI / Gemini provider (pulls google-auth transitively for ADC).
+vertex = [
+    "google-genai>=1.0",
 ]
 dev = [
     "ruff>=0.8",
     "mypy>=1.13",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "import-linter>=2.0",
 ]
 
 [project.urls]
@@ -80,3 +89,32 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+# Enforce the engine seam: the domain-agnostic core (models + index +
+# intelligence.llm + exceptions) must never import the iOS application layers or
+# the iOS-tuned query orchestration. This is what lets a downstream app depend
+# on the engine subset alone. Run with `lint-imports`.
+[tool.importlinter]
+root_package = "mudline"
+
+[[tool.importlinter.contracts]]
+name = "Engine must not import the mudline application layers"
+type = "forbidden"
+source_modules = [
+    "mudline.models",
+    "mudline.index",
+    "mudline.intelligence.llm",
+    "mudline.exceptions",
+]
+forbidden_modules = [
+    "mudline.foundation",
+    "mudline.extractors",
+    "mudline.intelligence.planner",
+    "mudline.intelligence.synthesizer",
+    "mudline.intelligence.tools",
+    "mudline.intelligence.router",
+    "mudline.intelligence.context",
+    "mudline.intelligence.memory",
+    "mudline.cli",
+    "mudline.api",
+]

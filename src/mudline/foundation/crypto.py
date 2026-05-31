@@ -12,7 +12,10 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import iOSbackup
+try:
+    import iOSbackup
+except ModuleNotFoundError:  # pragma: no cover - only hit without the 'ios' extra
+    iOSbackup = None  # noqa: N816 - must match the library module name
 
 from mudline.exceptions import DecryptionError
 
@@ -50,6 +53,12 @@ class KeybagDecryptor:
         Raises:
             DecryptionError: If password is incorrect or keybag is corrupted.
         """
+        if iOSbackup is None:
+            raise DecryptionError(
+                "Encrypted backup support requires the 'ios' extra. "
+                "Install it with: pip install 'mudline[ios]'"
+            )
+
         self._backup_path = backup_path
         self._password = password
         self._backup_instance: iOSbackup.iOSbackup | None = None
@@ -107,20 +116,15 @@ class KeybagDecryptor:
             decrypted_path = result.get("decryptedFilePath")
             if not decrypted_path:
                 raise DecryptionError(
-                    f"Failed to decrypt {domain}/{relative_path}: "
-                    "no decrypted path returned"
+                    f"Failed to decrypt {domain}/{relative_path}: no decrypted path returned"
                 )
             return Path(decrypted_path)
         except FileNotFoundError as e:
-            raise FileNotFoundError(
-                f"File not found in backup: {domain}/{relative_path}"
-            ) from e
+            raise FileNotFoundError(f"File not found in backup: {domain}/{relative_path}") from e
         except DecryptionError:
             raise
         except Exception as e:
-            raise DecryptionError(
-                f"Failed to decrypt {domain}/{relative_path}: {e}"
-            ) from e
+            raise DecryptionError(f"Failed to decrypt {domain}/{relative_path}: {e}") from e
 
     def decrypt_data(self, domain: str, relative_path: str) -> bytes:
         """Decrypt a single file to bytes in memory.
@@ -144,20 +148,14 @@ class KeybagDecryptor:
 
         try:
             # getRelativePathDecryptedData returns (info_dict, bytes)
-            _info, data = self._backup_instance.getRelativePathDecryptedData(
-                relative_path
-            )
+            _info, data = self._backup_instance.getRelativePathDecryptedData(relative_path)
             return data
         except FileNotFoundError as e:
-            raise FileNotFoundError(
-                f"File not found in backup: {domain}/{relative_path}"
-            ) from e
+            raise FileNotFoundError(f"File not found in backup: {domain}/{relative_path}") from e
         except DecryptionError:
             raise
         except Exception as e:
-            raise DecryptionError(
-                f"Failed to decrypt {domain}/{relative_path}: {e}"
-            ) from e
+            raise DecryptionError(f"Failed to decrypt {domain}/{relative_path}: {e}") from e
 
     def get_manifest_db_path(self) -> Path:
         """Get the path to a decrypted copy of Manifest.db.
