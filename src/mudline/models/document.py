@@ -17,7 +17,12 @@ if TYPE_CHECKING:
 
 
 class DocumentType(StrEnum):
-    """Supported iOS data types."""
+    """Supported document types.
+
+    Most members map to iOS data sources. TRANSCRIPT is a generic,
+    source-agnostic type for downstream engine consumers (e.g. audio/call
+    transcripts) so they can produce Documents without forking this enum.
+    """
     MESSAGE = "message"
     PHOTO = "photo"
     NOTE = "note"
@@ -26,6 +31,7 @@ class DocumentType(StrEnum):
     CALL = "call"
     VOICEMAIL = "voicemail"
     SAFARI = "safari"
+    TRANSCRIPT = "transcript"
 
 
 @dataclass(frozen=True)

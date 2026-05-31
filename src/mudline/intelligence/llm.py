@@ -3,9 +3,12 @@
 Supports:
 - Anthropic Claude via the anthropic SDK
 - OpenAI-compatible services (Ollama) via httpx
+- Claude Code CLI in headless mode
+- Google Gemini via Vertex AI (optional ``vertex`` extra)
 
 This module provides a Protocol-based abstraction so the intelligence layer
-can work with any LLM backend without coupling to a specific provider.
+can work with any LLM backend without coupling to a specific provider. Optional
+backends lazy-import their SDK so the engine imports cleanly without them.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import anthropic
 import httpx
@@ -24,17 +27,20 @@ from anthropic import AsyncAnthropic
 
 from mudline.exceptions import LLMError
 
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
 logger = logging.getLogger(__name__)
 
 
-async def _retry_with_backoff(
-    fn: Any,
+async def _retry_with_backoff[T](
+    fn: Callable[[], Awaitable[T]],
     *,
-    is_retryable: Any,
+    is_retryable: Callable[[Exception], bool],
     max_retries: int = 3,
     base_delay: float = 1.0,
     operation_name: str = "LLM call",
-) -> Any:
+) -> T:
     """Retry an async callable with exponential backoff on transient errors.
 
     Args:
@@ -59,7 +65,7 @@ async def _retry_with_backoff(
             last_exc = exc
             if attempt >= max_retries or not is_retryable(exc):
                 raise
-            delay = base_delay * (2 ** attempt)
+            delay = base_delay * (2**attempt)
             logger.warning(
                 "%s failed (attempt %d/%d), retrying in %.1fs: %s",
                 operation_name,
@@ -103,6 +109,26 @@ def _is_claude_code_retryable(exc: Exception) -> bool:
         if re.search(r"exit \d+", msg):
             return True
     return False
+
+
+def _is_vertex_retryable(exc: Exception) -> bool:
+    """Return True if a Vertex/Gemini exception is transient and worth retrying.
+
+    Duck-typed so this module need not import ``google-genai`` (an optional
+    dependency). google-genai raises ``APIError`` with a numeric ``code``;
+    ``google.api_core`` raises typed exceptions like ``ResourceExhausted``.
+    """
+    code = getattr(exc, "code", None)
+    if not isinstance(code, int):
+        code = getattr(exc, "status_code", None)
+    if isinstance(code, int) and (code == 429 or code >= 500):
+        return True
+    return type(exc).__name__ in {
+        "ResourceExhausted",
+        "ServiceUnavailable",
+        "InternalServerError",
+        "DeadlineExceeded",
+    }
 
 
 @dataclass(frozen=True)
@@ -230,6 +256,7 @@ class AnthropicProvider:
         Raises:
             LLMError: If the API call fails.
         """
+
         async def _call() -> LLMResponse:
             # Separate system messages from user/assistant messages
             system_parts = [msg.content for msg in messages if msg.role == "system"]
@@ -352,6 +379,7 @@ class OllamaProvider:
         Raises:
             LLMError: If the HTTP request fails.
         """
+
         async def _call() -> LLMResponse:
             # Convert Message dataclasses to dict format
             api_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
@@ -566,20 +594,22 @@ class ClaudeCodeProvider:
         # If tools are provided, append their descriptions so the model
         # knows what's available (it can describe calls in text)
         if tools:
-            tool_desc = "\n".join(
-                f"- {t.name}: {t.description}" for t in tools
-            )
+            tool_desc = "\n".join(f"- {t.name}: {t.description}" for t in tools)
             prompt += (
                 "\n\n[Available tools — respond with JSON tool calls "
-                "in the format {\"tool\": \"name\", \"arguments\": {...}} "
+                'in the format {"tool": "name", "arguments": {...}} '
                 "if you need to use them]\n" + tool_desc
             )
 
         async def _call() -> LLMResponse:
             cmd = [
-                claude_bin, "-p", prompt,
-                "--output-format", "json",
-                "--model", self.model,
+                claude_bin,
+                "-p",
+                prompt,
+                "--output-format",
+                "json",
+                "--model",
+                self.model,
             ]
 
             proc = await asyncio.create_subprocess_exec(
@@ -587,9 +617,7 @@ class ClaudeCodeProvider:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(), timeout=120.0
-            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
 
             if proc.returncode != 0:
                 err = stderr.decode().strip() if stderr else "unknown error"
@@ -639,6 +667,157 @@ class ClaudeCodeProvider:
             raise LLMError(f"Claude Code CLI failed: {e}") from e
 
 
+class VertexAIProvider:
+    """Google Gemini provider via Vertex AI (``google-genai`` SDK).
+
+    Authenticates with Application Default Credentials (ADC), so customer
+    content stays within the configured GCP project — Gemini on Vertex does not
+    train on prompts by default and is covered by the Google Cloud DPA. Requires
+    the ``vertex`` extra (``pip install 'mudline[vertex]'``).
+    """
+
+    def __init__(
+        self,
+        project: str | None = None,
+        location: str | None = None,
+        model: str = "gemini-2.5-pro",
+    ) -> None:
+        """Initialize the Vertex AI provider.
+
+        Args:
+            project: GCP project ID. Falls back to ``GOOGLE_CLOUD_PROJECT``, then
+                whatever ADC resolves.
+            location: Vertex region. Falls back to ``GOOGLE_CLOUD_LOCATION``,
+                then ``us-central1``.
+            model: Gemini model name. Defaults to ``gemini-2.5-pro``.
+
+        Raises:
+            LLMError: If the ``vertex`` extra is not installed.
+        """
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError as e:
+            raise LLMError(
+                "The Vertex AI provider requires the 'vertex' extra. "
+                "Install it with: pip install 'mudline[vertex]'"
+            ) from e
+
+        self._types = types
+        self.model = model
+        project = project or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        location = location or os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+        self.client = genai.Client(vertexai=True, project=project, location=location)
+
+    async def complete(
+        self,
+        messages: list[Message],
+        tools: list[ToolDef] | None = None,
+    ) -> LLMResponse:
+        """Generate a completion using Gemini on Vertex AI.
+
+        Args:
+            messages: Conversation history. System messages become the model's
+                system instruction; ``assistant`` messages map to Gemini's
+                ``model`` role.
+            tools: Optional tools, converted to Gemini function declarations.
+
+        Returns:
+            LLMResponse with Gemini's output and any function calls.
+
+        Raises:
+            LLMError: If the API call fails.
+        """
+        types = self._types
+
+        async def _call() -> LLMResponse:
+            system_parts = [msg.content for msg in messages if msg.role == "system"]
+            system_text = "\n".join(system_parts) if system_parts else None
+
+            contents = [
+                types.Content(
+                    role="model" if msg.role == "assistant" else "user",
+                    parts=[types.Part(text=msg.content)],
+                )
+                for msg in messages
+                if msg.role != "system"
+            ]
+
+            config_kwargs: dict[str, Any] = {"max_output_tokens": 4096}
+            if system_text:
+                config_kwargs["system_instruction"] = system_text
+            if tools:
+                config_kwargs["tools"] = [
+                    types.Tool(
+                        function_declarations=[
+                            types.FunctionDeclaration(
+                                name=tool.name,
+                                description=tool.description,
+                                parameters=tool.parameters,
+                            )
+                            for tool in tools
+                        ]
+                    )
+                ]
+
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=types.GenerateContentConfig(**config_kwargs),
+            )
+
+            content = ""
+            tool_calls: list[ToolCall] = []
+            candidates = response.candidates or []
+            if candidates and candidates[0].content and candidates[0].content.parts:
+                for part in candidates[0].content.parts:
+                    part_text = getattr(part, "text", None)
+                    if part_text:
+                        content += part_text
+                    func_call = getattr(part, "function_call", None)
+                    if func_call is not None:
+                        tool_calls.append(
+                            ToolCall(
+                                id=func_call.id or f"vertex-{len(tool_calls)}",
+                                name=func_call.name or "",
+                                arguments=dict(func_call.args) if func_call.args else {},
+                            )
+                        )
+
+            usage: dict[str, Any] = {}
+            meta = response.usage_metadata
+            if meta is not None:
+                usage = {
+                    "input_tokens": meta.prompt_token_count or 0,
+                    "output_tokens": meta.candidates_token_count or 0,
+                }
+
+            logger.debug(
+                "Vertex completion: model=%s, tool_calls=%d",
+                self.model,
+                len(tool_calls),
+            )
+
+            return LLMResponse(
+                content=content,
+                model=self.model,
+                tool_calls=tool_calls,
+                usage=usage,
+            )
+
+        try:
+            return await _retry_with_backoff(
+                _call,
+                is_retryable=_is_vertex_retryable,
+                operation_name="Vertex AI",
+            )
+        except Exception as e:
+            if isinstance(e, LLMError):
+                raise
+            logger.error(f"Vertex AI error: {e}")
+            raise LLMError(f"Vertex AI failed: {e}") from e
+
+
 def create_provider(
     provider_type: str,
     **kwargs: Any,
@@ -646,11 +825,14 @@ def create_provider(
     """Factory function to create an LLM provider.
 
     Args:
-        provider_type: "anthropic", "ollama", or "claude-code".
+        provider_type: "anthropic", "ollama", "claude-code", or "vertex"
+                  (alias "gemini").
         **kwargs: Provider-specific arguments.
                   - anthropic: api_key (optional), model (optional)
                   - ollama: base_url (optional), model (optional)
                   - claude-code: model (optional, default "sonnet")
+                  - vertex/gemini: project (optional), location (optional),
+                    model (optional, default "gemini-2.5-pro")
 
     Returns:
         An LLMProvider instance.
@@ -671,6 +853,12 @@ def create_provider(
     elif provider_type == "claude-code":
         return ClaudeCodeProvider(
             model=kwargs.get("model", "sonnet"),
+        )
+    elif provider_type in ("vertex", "gemini"):
+        return VertexAIProvider(
+            project=kwargs.get("project"),
+            location=kwargs.get("location"),
+            model=kwargs.get("model", "gemini-2.5-pro"),
         )
     else:
         raise LLMError(f"Unknown LLM provider: {provider_type}")

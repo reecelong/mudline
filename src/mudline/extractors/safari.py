@@ -17,7 +17,7 @@ from mudline.models.document import Document, DocumentType, Source
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mudline.foundation.manifest import ManifestResolver
+    from mudline.models import ResourceResolver
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +49,11 @@ class SafariExtractor:
         """Document type produced by this extractor."""
         return DocumentType.SAFARI.value
 
-    def can_extract(self, resolver: ManifestResolver) -> bool:
+    def can_extract(self, resolver: ResourceResolver) -> bool:
         """Check if Safari data exists in the backup.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Returns:
             True if History.db exists, False otherwise.
@@ -62,11 +62,11 @@ class SafariExtractor:
             self.domain, "Library/Safari/History.db"
         )
 
-    def extract(self, resolver: ManifestResolver) -> Iterator[Document]:
+    def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract Safari history and bookmarks.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
 
         Yields:
             Document objects for each history entry and bookmark.
@@ -89,14 +89,14 @@ class SafariExtractor:
 
     def _extract_history(
         self,
-        resolver: ManifestResolver,
+        resolver: ResourceResolver,
         backup_id: str,
         backup_timestamp: datetime,
     ) -> Iterator[Document]:
         """Extract Safari browsing history.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
             backup_id: Backup identifier.
             backup_timestamp: Backup timestamp.
 
@@ -198,14 +198,14 @@ class SafariExtractor:
 
     def _extract_bookmarks(
         self,
-        resolver: ManifestResolver,
+        resolver: ResourceResolver,
         backup_id: str,
         backup_timestamp: datetime,
     ) -> Iterator[Document]:
         """Extract Safari bookmarks.
 
         Args:
-            resolver: ManifestResolver for the target backup.
+            resolver: ResourceResolver for the target backup.
             backup_id: Backup identifier.
             backup_timestamp: Backup timestamp.
 
@@ -336,22 +336,22 @@ class SafariExtractor:
             logger.warning("Failed to load bookmark folders: %s", e)
         return folders
 
-    def _build_backup_id(self, resolver: ManifestResolver) -> str:
+    def _build_backup_id(self, resolver: ResourceResolver) -> str:
         """Build a backup ID from backup path.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             A string identifier for the backup.
         """
         return resolver.backup_path.name
 
-    def _get_backup_timestamp(self, resolver: ManifestResolver) -> datetime:
+    def _get_backup_timestamp(self, resolver: ResourceResolver) -> datetime:
         """Get the backup timestamp from Info.plist.
 
         Args:
-            resolver: ManifestResolver.
+            resolver: ResourceResolver.
 
         Returns:
             Backup timestamp, or current time if unavailable.

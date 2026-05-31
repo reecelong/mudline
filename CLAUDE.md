@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-Mudline extracts, indexes, and makes queryable all personal data from iOS backups using natural language. Think "smarter Siri" — the one Apple never built. Users can ask questions like "what did Sarah text me about the plumber last month?" and get accurate, cited answers.
+Mudline extracts, indexes, and makes queryable all personal data from iOS backups using natural language. Users can ask questions like "what did Sarah text me about the plumber last month?" and get accurate, cited answers.
 
 ## Architecture Overview
 
