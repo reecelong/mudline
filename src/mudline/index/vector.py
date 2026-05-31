@@ -93,9 +93,7 @@ class VectorStore:
 
         # Create or get collection
         # Collection names must be 3-63 chars, alphanumeric + dash/underscore
-        sanitized_name = (
-            self.config.collection_name.replace(" ", "_").lower()[:63]
-        )
+        sanitized_name = self.config.collection_name.replace(" ", "_").lower()[:63]
         try:
             self._collection = self._client.get_or_create_collection(
                 name=sanitized_name,
@@ -104,13 +102,10 @@ class VectorStore:
                 },
             )
         except Exception as e:
-            raise SearchError(
-                f"Failed to create collection {sanitized_name}: {e}"
-            ) from e
+            raise SearchError(f"Failed to create collection {sanitized_name}: {e}") from e
 
         logger.info(
-            f"Initialized ChromaDB collection '{sanitized_name}' "
-            f"at {self.config.persist_directory}"
+            f"Initialized ChromaDB collection '{sanitized_name}' at {self.config.persist_directory}"
         )
 
     def add(self, docs: list[Document]) -> None:
@@ -251,22 +246,16 @@ class VectorStore:
                     # Reconstruct minimal Document for results
                     # Note: This is a simplified Document; full reconstruction
                     # would require fetching from the SQL store
-                    doc = self._reconstruct_document(
-                        doc_id, text_content, metadata
-                    )
+                    doc = self._reconstruct_document(doc_id, text_content, metadata)
                     documents_with_scores.append((doc, similarity))
 
-            logger.debug(
-                f"Query returned {len(documents_with_scores)} results"
-            )
+            logger.debug(f"Query returned {len(documents_with_scores)} results")
             return documents_with_scores
 
         except Exception as e:
             raise SearchError(f"Query failed: {e}") from e
 
-    def _reconstruct_document(
-        self, doc_id: str, text: str, metadata: dict[str, Any]
-    ) -> Document:
+    def _reconstruct_document(self, doc_id: str, text: str, metadata: dict[str, Any]) -> Document:
         """Reconstruct a Document object from stored metadata and text.
 
         Args:

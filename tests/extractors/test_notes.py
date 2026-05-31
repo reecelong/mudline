@@ -143,9 +143,7 @@ def temp_backup(tmp_path: Path) -> Path:
 
     info_plist = backup_dir / "Info.plist"
     with open(info_plist, "wb") as f:
-        plistlib.dump(
-            {"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f
-        )
+        plistlib.dump({"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f)
 
     return backup_dir
 
@@ -173,9 +171,7 @@ class TestNoteExtractor:
         """Test that can_extract returns True when NoteStore.sqlite exists."""
         assert extractor.can_extract(resolver) is True
 
-    def test_can_extract_without_notes_db(
-        self, extractor: NoteExtractor, tmp_path: Path
-    ) -> None:
+    def test_can_extract_without_notes_db(self, extractor: NoteExtractor, tmp_path: Path) -> None:
         """Test that can_extract returns False when NoteStore.sqlite is missing."""
         # Create a minimal backup without NoteStore.sqlite
         backup_dir = tmp_path / "empty_backup"
@@ -200,9 +196,7 @@ class TestNoteExtractor:
         resolver = ManifestResolver(backup_dir)
         assert extractor.can_extract(resolver) is False
 
-    def test_extract_notes(
-        self, extractor: NoteExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_extract_notes(self, extractor: NoteExtractor, resolver: ManifestResolver) -> None:
         """Test extracting notes from the temporary backup."""
         docs = list(extractor.extract(resolver))
 
@@ -212,9 +206,7 @@ class TestNoteExtractor:
         # All should be NOTE type
         assert all(doc.type == DocumentType.NOTE for doc in docs)
 
-    def test_note_text_content(
-        self, extractor: NoteExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_note_text_content(self, extractor: NoteExtractor, resolver: ManifestResolver) -> None:
         """Test that note text is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -244,9 +236,7 @@ class TestNoteExtractor:
         # Second note has no ZDATA
         assert docs[1].metadata["has_attachments"] is False
 
-    def test_source_provenance(
-        self, extractor: NoteExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_source_provenance(self, extractor: NoteExtractor, resolver: ManifestResolver) -> None:
         """Test that source provenance is correctly set."""
         docs = list(extractor.extract(resolver))
 
@@ -265,9 +255,7 @@ class TestNoteExtractor:
         ids = [doc.id for doc in docs]
         assert len(ids) == len(set(ids))  # All IDs should be unique
 
-    def test_extractor_implements_protocol(
-        self, extractor: NoteExtractor
-    ) -> None:
+    def test_extractor_implements_protocol(self, extractor: NoteExtractor) -> None:
         """Test that NoteExtractor implements the Extractor protocol."""
         from mudline.models.extractor import Extractor
 

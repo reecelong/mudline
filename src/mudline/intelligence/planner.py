@@ -159,9 +159,7 @@ class QueryPlanner:
             llm_response=last_response,
         )
 
-    def _execute_tool_call(
-        self, tool_call: ToolCall
-    ) -> list[dict[str, Any]]:
+    def _execute_tool_call(self, tool_call: ToolCall) -> list[dict[str, Any]]:
         """Execute a single tool call, returning results or an error dict.
 
         Catches exceptions from the tool registry so a single failed tool

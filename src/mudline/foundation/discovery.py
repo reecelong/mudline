@@ -162,9 +162,7 @@ class BackupDiscovery:
                         manifest_plist = plistlib.load(f)
                     is_encrypted = manifest_plist.get("IsEncrypted", False)
                 except Exception as e:
-                    logger.warning(
-                        "Failed to parse Manifest.plist at %s: %s", backup_path, e
-                    )
+                    logger.warning("Failed to parse Manifest.plist at %s: %s", backup_path, e)
                     # Continue with is_encrypted=False if we can't parse it
 
             return BackupInfo(
@@ -201,8 +199,7 @@ class BackupDiscovery:
         backup_info = self._parse_backup(backup_path)
         if backup_info is None:
             raise BackupNotFoundError(
-                f"No valid iOS backup found at {backup_path} "
-                "(missing or invalid Info.plist)"
+                f"No valid iOS backup found at {backup_path} (missing or invalid Info.plist)"
             )
 
         return backup_info

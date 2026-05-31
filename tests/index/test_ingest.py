@@ -172,9 +172,7 @@ class TestIngestPipeline:
         # Should have been called at least once
         assert len(progress_calls) > 0
 
-    def test_is_ingested_false_initially(
-        self, structured_store: StructuredStore
-    ) -> None:
+    def test_is_ingested_false_initially(self, structured_store: StructuredStore) -> None:
         """Test that is_ingested returns False for new backup."""
         pipeline = IngestPipeline(structured_store)
 
@@ -269,9 +267,10 @@ class TestIngestPipeline:
         pipeline = IngestPipeline(structured_store)
 
         # Patch insert_batch to fail
-        with patch.object(
-            structured_store, "insert_batch", side_effect=Exception("Test error")
-        ), pytest.raises(SearchError):
+        with (
+            patch.object(structured_store, "insert_batch", side_effect=Exception("Test error")),
+            pytest.raises(SearchError),
+        ):
             pipeline.ingest("test-backup", iter(sample_documents))
 
         # State should be recorded as failed

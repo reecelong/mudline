@@ -72,14 +72,10 @@ class ContactExtractor:
             FileNotFoundError: If AddressBook.sqlitedb is not in the backup.
             ExtractionError: If the database schema is unexpected or data is corrupt.
         """
-        contacts_path = resolver.resolve(
-            self.domain, "Library/AddressBook/AddressBook.sqlitedb"
-        )
+        contacts_path = resolver.resolve(self.domain, "Library/AddressBook/AddressBook.sqlitedb")
 
         try:
-            conn = sqlite3.connect(
-                f"file:{contacts_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{contacts_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
 
             # Fetch all persons and their multi-value records
@@ -132,9 +128,7 @@ class ContactExtractor:
             conn.close()
 
         except sqlite3.Error as e:
-            raise ExtractionError(
-                f"Failed to parse AddressBook.sqlitedb: {e}"
-            ) from e
+            raise ExtractionError(f"Failed to parse AddressBook.sqlitedb: {e}") from e
 
         # Get backup metadata for provenance
         backup_id = f"{resolver.backup_path.name}"
@@ -208,14 +202,10 @@ class ContactExtractor:
         """
         handle_map: dict[str, str] = {}
 
-        contacts_path = resolver.resolve(
-            self.domain, "Library/AddressBook/AddressBook.sqlitedb"
-        )
+        contacts_path = resolver.resolve(self.domain, "Library/AddressBook/AddressBook.sqlitedb")
 
         try:
-            conn = sqlite3.connect(
-                f"file:{contacts_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{contacts_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
 
             # Fetch all persons
@@ -228,9 +218,7 @@ class ContactExtractor:
                 FROM ABPerson p
                 """
             )
-            persons = {
-                row["ROWID"]: (row["First"], row["Last"]) for row in cursor.fetchall()
-            }
+            persons = {row["ROWID"]: (row["First"], row["Last"]) for row in cursor.fetchall()}
 
             # Fetch all multi-value records
             cursor = conn.execute(

@@ -25,16 +25,12 @@ class TestContactExtractor:
         """Test that data_type property returns contact."""
         assert extractor.data_type == "contact"
 
-    def test_can_extract_with_valid_backup(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_can_extract_with_valid_backup(self, extractor: ContactExtractor, backup_path) -> None:
         """Test can_extract returns True when AddressBook exists."""
         resolver = ManifestResolver(backup_path)
         assert extractor.can_extract(resolver) is True
 
-    def test_extract_returns_documents(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_returns_documents(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that extract yields Document objects."""
         resolver = ManifestResolver(backup_path)
         docs = list(extractor.extract(resolver))
@@ -42,9 +38,7 @@ class TestContactExtractor:
         assert len(docs) == 3, "Expected 3 contacts from fixture"
         assert all(doc.type == DocumentType.CONTACT for doc in docs)
 
-    def test_extract_sarah_johnson(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_sarah_johnson(self, extractor: ContactExtractor, backup_path) -> None:
         """Test extraction of Sarah Johnson contact."""
         resolver = ManifestResolver(backup_path)
         docs = {doc.text.split(" — ")[0]: doc for doc in extractor.extract(resolver)}
@@ -65,9 +59,7 @@ class TestContactExtractor:
         assert "+15559876543" in sarah.text
         assert "sarah@example.com" in sarah.text
 
-    def test_extract_john_smith(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_john_smith(self, extractor: ContactExtractor, backup_path) -> None:
         """Test extraction of John Smith contact."""
         resolver = ManifestResolver(backup_path)
         docs = {doc.text.split(" — ")[0]: doc for doc in extractor.extract(resolver)}
@@ -85,9 +77,7 @@ class TestContactExtractor:
         assert "John Smith" in john.text
         assert "+15551112222" in john.text
 
-    def test_extract_mom(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_mom(self, extractor: ContactExtractor, backup_path) -> None:
         """Test extraction of Mom contact (no last name, no org)."""
         resolver = ManifestResolver(backup_path)
         docs = {doc.text.split(" — ")[0]: doc for doc in extractor.extract(resolver)}
@@ -105,18 +95,14 @@ class TestContactExtractor:
         assert "Mom" in mom.text
         assert "+15551234567" in mom.text
 
-    def test_extract_no_timestamp(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_no_timestamp(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that contacts have no timestamp."""
         resolver = ManifestResolver(backup_path)
         docs = list(extractor.extract(resolver))
 
         assert all(doc.timestamp is None for doc in docs)
 
-    def test_extract_source_provenance(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_source_provenance(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that documents include proper source provenance."""
         resolver = ManifestResolver(backup_path)
         docs = list(extractor.extract(resolver))
@@ -126,9 +112,7 @@ class TestContactExtractor:
             assert doc.source.relative_path == "Library/AddressBook/AddressBook.sqlitedb"
             assert doc.source.backup_timestamp is not None
 
-    def test_get_handle_map_complete(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_get_handle_map_complete(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that get_handle_map returns all handles."""
         resolver = ManifestResolver(backup_path)
         handle_map = extractor.get_handle_map(resolver)
@@ -142,9 +126,7 @@ class TestContactExtractor:
         # Should have exactly 4 handles (2 for Sarah, 1 for John, 1 for Mom)
         assert len(handle_map) == 4
 
-    def test_get_handle_map_phone_to_name(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_get_handle_map_phone_to_name(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that phone handles map to correct contact name."""
         resolver = ManifestResolver(backup_path)
         handle_map = extractor.get_handle_map(resolver)
@@ -153,18 +135,14 @@ class TestContactExtractor:
         assert handle_map["+15551112222"] == "John Smith"
         assert handle_map["+15551234567"] == "Mom"
 
-    def test_get_handle_map_email_to_name(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_get_handle_map_email_to_name(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that email handles map to correct contact name."""
         resolver = ManifestResolver(backup_path)
         handle_map = extractor.get_handle_map(resolver)
 
         assert handle_map["sarah@example.com"] == "Sarah Johnson"
 
-    def test_extract_document_has_id(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_document_has_id(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that extracted documents have deterministic IDs."""
         resolver = ManifestResolver(backup_path)
         docs = list(extractor.extract(resolver))
@@ -188,9 +166,7 @@ class TestContactExtractor:
 
         assert all(len(doc.attachments) == 0 for doc in docs)
 
-    def test_extract_handles_list_not_empty(
-        self, extractor: ContactExtractor, backup_path
-    ) -> None:
+    def test_extract_handles_list_not_empty(self, extractor: ContactExtractor, backup_path) -> None:
         """Test that metadata handles list is populated for all contacts."""
         resolver = ManifestResolver(backup_path)
         docs = list(extractor.extract(resolver))
@@ -259,12 +235,8 @@ class TestContactExtractor:
     ) -> None:
         """Test that multiple extractions return consistent results."""
         resolver = ManifestResolver(backup_path)
-        docs1 = sorted(
-            list(extractor.extract(resolver)), key=lambda d: d.text
-        )
-        docs2 = sorted(
-            list(extractor.extract(resolver)), key=lambda d: d.text
-        )
+        docs1 = sorted(list(extractor.extract(resolver)), key=lambda d: d.text)
+        docs2 = sorted(list(extractor.extract(resolver)), key=lambda d: d.text)
 
         assert len(docs1) == len(docs2)
         for d1, d2 in zip(docs1, docs2, strict=True):

@@ -224,9 +224,7 @@ class TestHybridRetriever:
         timestamps = [m.timestamp for m in messages if m.timestamp]
         assert timestamps == sorted(timestamps)
 
-    def test_search_with_vector_store_reranking(
-        self, structured_store: StructuredStore
-    ) -> None:
+    def test_search_with_vector_store_reranking(self, structured_store: StructuredStore) -> None:
         """Test hybrid search with vector store re-ranking."""
         mock_vector_store = MagicMock()
 
@@ -250,9 +248,7 @@ class TestHybridRetriever:
 
         assert len(results) > 0
 
-    def test_search_vector_fallback_on_error(
-        self, structured_store: StructuredStore
-    ) -> None:
+    def test_search_vector_fallback_on_error(self, structured_store: StructuredStore) -> None:
         """Test that search falls back to FTS if vector search errors."""
         mock_vector_store = MagicMock()
         mock_vector_store.query.side_effect = SearchError("Vector search failed")

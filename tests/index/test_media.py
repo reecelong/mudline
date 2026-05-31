@@ -27,8 +27,6 @@ def media_config(tmp_path: Path) -> MediaIndexConfig:
     )
 
 
-
-
 class TestMediaIndexConfig:
     """Test MediaIndexConfig."""
 
@@ -56,29 +54,25 @@ class TestMediaIndexConfig:
 class TestMediaIndex:
     """Test the MediaIndex class."""
 
-    def test_initialization_without_clip_installed(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_initialization_without_clip_installed(self, media_config: MediaIndexConfig) -> None:
         """Test that initialization fails gracefully if open-clip-torch is missing."""
-        with patch(
-            "mudline.index.media.open_clip", side_effect=ImportError("Not installed")
-        ), pytest.raises(SearchError, match="open-clip-torch not installed"):
+        with (
+            patch("mudline.index.media.open_clip", side_effect=ImportError("Not installed")),
+            pytest.raises(SearchError, match="open-clip-torch not installed"),
+        ):
             MediaIndex(media_config)
 
-    def test_initialization_with_import_error(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_initialization_with_import_error(self, media_config: MediaIndexConfig) -> None:
         """Test initialization handles open_clip import errors."""
-        with patch(
-            "mudline.index.media.open_clip", side_effect=ImportError("Mock error")
-        ), pytest.raises(SearchError, match="open-clip-torch not installed"):
+        with (
+            patch("mudline.index.media.open_clip", side_effect=ImportError("Mock error")),
+            pytest.raises(SearchError, match="open-clip-torch not installed"),
+        ):
             MediaIndex(media_config)
 
     def test_count_initial(self, media_config: MediaIndexConfig) -> None:
         """Test that count starts at zero."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -90,9 +84,7 @@ class TestMediaIndex:
         """Test that persist directory is created."""
         persist_path = Path(media_config.persist_directory)
 
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -103,9 +95,7 @@ class TestMediaIndex:
 
     def test_config_stored(self, media_config: MediaIndexConfig) -> None:
         """Test that config is stored."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -114,13 +104,9 @@ class TestMediaIndex:
 
             assert index.config == media_config
 
-    def test_index_photo_file_not_found(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_index_photo_file_not_found(self, media_config: MediaIndexConfig) -> None:
         """Test that indexing a nonexistent file raises SearchError."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -130,13 +116,9 @@ class TestMediaIndex:
             with pytest.raises(SearchError, match="Photo file not found"):
                 index.index_photo(Path("/nonexistent/photo.jpg"))
 
-    def test_search_empty_query_raises_error(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_search_empty_query_raises_error(self, media_config: MediaIndexConfig) -> None:
         """Test that searching with empty query raises SearchError."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -146,13 +128,9 @@ class TestMediaIndex:
             with pytest.raises(SearchError, match="Query cannot be empty"):
                 index.search("")
 
-    def test_search_returns_list(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_search_returns_list(self, media_config: MediaIndexConfig) -> None:
         """Test that search returns a list."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)
@@ -171,10 +149,10 @@ class TestMediaIndex:
         dummy_image = tmp_path / "test.jpg"
         dummy_image.write_bytes(b"fake image data")
 
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create, patch("mudline.index.media.Image") as mock_image, patch(
-            "mudline.index.media.torch"
+        with (
+            patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create,
+            patch("mudline.index.media.Image") as mock_image,
+            patch("mudline.index.media.torch"),
         ):
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
@@ -206,13 +184,9 @@ class TestMediaIndex:
             with contextlib.suppress(SearchError):
                 index.index_photo(dummy_image, metadata)
 
-    def test_search_limit_parameter(
-        self, media_config: MediaIndexConfig
-    ) -> None:
+    def test_search_limit_parameter(self, media_config: MediaIndexConfig) -> None:
         """Test that search respects limit parameter."""
-        with patch(
-            "mudline.index.media.open_clip.create_model_and_transforms"
-        ) as mock_create:
+        with patch("mudline.index.media.open_clip.create_model_and_transforms") as mock_create:
             mock_model = MagicMock()
             mock_preprocess = MagicMock()
             mock_create.return_value = (mock_model, None, mock_preprocess)

@@ -152,9 +152,7 @@ def temp_backup(tmp_path: Path) -> Path:
 
     info_plist = backup_dir / "Info.plist"
     with open(info_plist, "wb") as f:
-        plistlib.dump(
-            {"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f
-        )
+        plistlib.dump({"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f)
 
     return backup_dir
 
@@ -234,9 +232,7 @@ class TestSafariExtractor:
         assert any("Google" in text for text in texts)
         assert any("GitHub" in text for text in texts)
 
-    def test_history_metadata(
-        self, extractor: SafariExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_history_metadata(self, extractor: SafariExtractor, resolver: ManifestResolver) -> None:
         """Test that history metadata is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -249,9 +245,7 @@ class TestSafariExtractor:
         assert google.metadata["visit_count"] == 42
         assert google.metadata["url"] == "https://www.google.com"
 
-    def test_bookmark_content(
-        self, extractor: SafariExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_bookmark_content(self, extractor: SafariExtractor, resolver: ManifestResolver) -> None:
         """Test that bookmark content is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -310,9 +304,7 @@ class TestSafariExtractor:
         ids = [doc.id for doc in docs]
         assert len(ids) == len(set(ids))  # All IDs should be unique
 
-    def test_extractor_implements_protocol(
-        self, extractor: SafariExtractor
-    ) -> None:
+    def test_extractor_implements_protocol(self, extractor: SafariExtractor) -> None:
         """Test that SafariExtractor implements the Extractor protocol."""
         from mudline.models.extractor import Extractor
 

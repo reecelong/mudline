@@ -172,9 +172,7 @@ def temp_backup(tmp_path: Path) -> Path:
 
     info_plist = backup_dir / "Info.plist"
     with open(info_plist, "wb") as f:
-        plistlib.dump(
-            {"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f
-        )
+        plistlib.dump({"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f)
 
     return backup_dir
 
@@ -229,9 +227,7 @@ class TestCalendarExtractor:
         resolver = ManifestResolver(backup_dir)
         assert extractor.can_extract(resolver) is False
 
-    def test_extract_events(
-        self, extractor: CalendarExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_extract_events(self, extractor: CalendarExtractor, resolver: ManifestResolver) -> None:
         """Test extracting calendar events."""
         docs = list(extractor.extract(resolver))
 
@@ -241,9 +237,7 @@ class TestCalendarExtractor:
         # All should be CALENDAR type
         assert all(doc.type == DocumentType.CALENDAR for doc in docs)
 
-    def test_event_summary(
-        self, extractor: CalendarExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_event_summary(self, extractor: CalendarExtractor, resolver: ManifestResolver) -> None:
         """Test that event summary is in text content."""
         docs = list(extractor.extract(resolver))
 
@@ -251,9 +245,7 @@ class TestCalendarExtractor:
         assert any("Team Meeting" in text for text in texts)
         assert any("Birthday" in text for text in texts)
 
-    def test_event_metadata(
-        self, extractor: CalendarExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_event_metadata(self, extractor: CalendarExtractor, resolver: ManifestResolver) -> None:
         """Test that event metadata is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -264,9 +256,7 @@ class TestCalendarExtractor:
         assert len(meeting.metadata["attendees"]) == 2
         assert "john@example.com" in meeting.metadata["attendees"]
 
-    def test_all_day_event(
-        self, extractor: CalendarExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_all_day_event(self, extractor: CalendarExtractor, resolver: ManifestResolver) -> None:
         """Test that all-day events are marked correctly."""
         docs = list(extractor.extract(resolver))
 
@@ -318,9 +308,7 @@ class TestCalendarExtractor:
         ids = [doc.id for doc in docs]
         assert len(ids) == len(set(ids))  # All IDs should be unique
 
-    def test_extractor_implements_protocol(
-        self, extractor: CalendarExtractor
-    ) -> None:
+    def test_extractor_implements_protocol(self, extractor: CalendarExtractor) -> None:
         """Test that CalendarExtractor implements the Extractor protocol."""
         from mudline.models.extractor import Extractor
 

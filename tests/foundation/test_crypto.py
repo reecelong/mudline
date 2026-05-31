@@ -45,9 +45,7 @@ class TestKeybagDecryptor:
         backup_path = tmp_path / "00008140-ABC123DEF456"
         backup_path.mkdir()
 
-        with patch(
-            "mudline.foundation.crypto.iOSbackup.iOSbackup"
-        ) as mock_ios:
+        with patch("mudline.foundation.crypto.iOSbackup.iOSbackup") as mock_ios:
             # Simulate the iOSbackup library raising an exception with password error
             mock_ios.side_effect = Exception("Invalid password")
 
@@ -70,9 +68,7 @@ class TestKeybagDecryptor:
             mock_ios.return_value = mock_instance
 
             decryptor = KeybagDecryptor(backup_path, "password123")
-            result = decryptor.decrypt_file(
-                "HomeDomain", "Library/SMS/sms.db"
-            )
+            result = decryptor.decrypt_file("HomeDomain", "Library/SMS/sms.db")
 
             assert result == decrypted_file
             mock_instance.getFileDecryptedCopy.assert_called_once_with(
@@ -97,9 +93,7 @@ class TestKeybagDecryptor:
             decryptor = KeybagDecryptor(backup_path, "password123")
 
             with pytest.raises(FileNotFoundError, match="not found in backup"):
-                decryptor.decrypt_file(
-                    "HomeDomain", "Library/Nonexistent/file.db"
-                )
+                decryptor.decrypt_file("HomeDomain", "Library/Nonexistent/file.db")
 
             decryptor.close()
 
@@ -136,14 +130,10 @@ class TestKeybagDecryptor:
             mock_ios.return_value = mock_instance
 
             decryptor = KeybagDecryptor(backup_path, "password123")
-            result = decryptor.decrypt_data(
-                "HomeDomain", "Library/SMS/sms.db"
-            )
+            result = decryptor.decrypt_data("HomeDomain", "Library/SMS/sms.db")
 
             assert result == expected_data
-            mock_instance.getRelativePathDecryptedData.assert_called_once_with(
-                "Library/SMS/sms.db"
-            )
+            mock_instance.getRelativePathDecryptedData.assert_called_once_with("Library/SMS/sms.db")
             decryptor.close()
 
     def test_decrypt_data_not_found(self, tmp_path: Path) -> None:
@@ -161,9 +151,7 @@ class TestKeybagDecryptor:
             decryptor = KeybagDecryptor(backup_path, "password123")
 
             with pytest.raises(FileNotFoundError, match="not found in backup"):
-                decryptor.decrypt_data(
-                    "HomeDomain", "Library/Nonexistent/file.db"
-                )
+                decryptor.decrypt_data("HomeDomain", "Library/Nonexistent/file.db")
 
             decryptor.close()
 
@@ -257,9 +245,7 @@ class TestManifestResolverWithDecryptor:
         resolver = ManifestResolver(backup_path)
         assert resolver._decryptor is None
 
-    def test_init_with_decryptor(
-        self, backup_path: Path, tmp_path: Path
-    ) -> None:
+    def test_init_with_decryptor(self, backup_path: Path, tmp_path: Path) -> None:
         """Test ManifestResolver can be initialized with decryptor."""
         encrypted_backup_path = tmp_path / "00008140-ENCRYPTED"
         encrypted_backup_path.mkdir()
@@ -276,15 +262,11 @@ class TestManifestResolverWithDecryptor:
             resolver = ManifestResolver(encrypted_backup_path, decryptor)
             assert resolver._decryptor is decryptor
 
-    def test_resolve_decrypted_without_decryptor(
-        self, backup_path: Path
-    ) -> None:
+    def test_resolve_decrypted_without_decryptor(self, backup_path: Path) -> None:
         """Test resolve_decrypted fails when no decryptor is configured."""
         resolver = ManifestResolver(backup_path)
 
-        with pytest.raises(
-            RuntimeError, match="no decryptor configured"
-        ):
+        with pytest.raises(RuntimeError, match="no decryptor configured"):
             resolver.resolve_decrypted("HomeDomain", "Library/SMS/sms.db")
 
     def test_resolve_decrypted_file_not_in_manifest(
@@ -295,12 +277,8 @@ class TestManifestResolverWithDecryptor:
             decryptor = Mock()
             resolver = ManifestResolver(backup_path, decryptor)
 
-            with pytest.raises(
-                FileNotFoundError, match="not in manifest"
-            ):
-                resolver.resolve_decrypted(
-                    "HomeDomain", "Library/Nonexistent/file.db"
-                )
+            with pytest.raises(FileNotFoundError, match="not in manifest"):
+                resolver.resolve_decrypted("HomeDomain", "Library/Nonexistent/file.db")
 
     def test_resolve_decrypted_delegates_to_decryptor(
         self, backup_path: Path, tmp_path: Path
@@ -313,18 +291,12 @@ class TestManifestResolverWithDecryptor:
         decryptor.decrypt_file.return_value = expected_path
 
         resolver = ManifestResolver(backup_path, decryptor)
-        result = resolver.resolve_decrypted(
-            "HomeDomain", "Library/SMS/sms.db"
-        )
+        result = resolver.resolve_decrypted("HomeDomain", "Library/SMS/sms.db")
 
         assert result == expected_path
-        decryptor.decrypt_file.assert_called_once_with(
-            "HomeDomain", "Library/SMS/sms.db"
-        )
+        decryptor.decrypt_file.assert_called_once_with("HomeDomain", "Library/SMS/sms.db")
 
-    def test_resolve_still_works_with_decryptor(
-        self, backup_path: Path
-    ) -> None:
+    def test_resolve_still_works_with_decryptor(self, backup_path: Path) -> None:
         """Test that resolve() still works when decryptor is present."""
         decryptor = Mock()
         resolver = ManifestResolver(backup_path, decryptor)
@@ -342,9 +314,7 @@ class TestManifestResolverWithDecryptor:
         from mudline.exceptions import DecryptionError
 
         decryptor = Mock()
-        decryptor.decrypt_file.side_effect = DecryptionError(
-            "Failed to decrypt"
-        )
+        decryptor.decrypt_file.side_effect = DecryptionError("Failed to decrypt")
 
         resolver = ManifestResolver(backup_path, decryptor)
 

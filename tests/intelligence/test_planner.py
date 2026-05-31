@@ -90,10 +90,12 @@ class TestToolCallExecution:
         tool_call = ToolCall(id="tc1", name="search_messages", arguments={"query": "plumber"})
 
         llm = AsyncMock()
-        llm.complete = AsyncMock(side_effect=[
-            _tool_response([tool_call]),
-            _text_response("Found 3 messages about plumber."),
-        ])
+        llm.complete = AsyncMock(
+            side_effect=[
+                _tool_response([tool_call]),
+                _text_response("Found 3 messages about plumber."),
+            ]
+        )
 
         tool_registry = MagicMock()
         tool_registry.get_tool_defs.return_value = _make_tool_defs()
@@ -120,10 +122,12 @@ class TestToolCallExecution:
         tc2 = ToolCall(id="tc2", name="search_messages", arguments={"query": "b"})
 
         llm = AsyncMock()
-        llm.complete = AsyncMock(side_effect=[
-            _tool_response([tc1, tc2]),
-            _text_response("Done."),
-        ])
+        llm.complete = AsyncMock(
+            side_effect=[
+                _tool_response([tc1, tc2]),
+                _text_response("Done."),
+            ]
+        )
 
         tool_registry = MagicMock()
         tool_registry.get_tool_defs.return_value = _make_tool_defs()
@@ -146,11 +150,13 @@ class TestMaxIterations:
 
         llm = AsyncMock()
         # Return tool calls for max_iterations, then final text on forced call
-        llm.complete = AsyncMock(side_effect=[
-            _tool_response([tool_call]),
-            _tool_response([tool_call]),
-            _text_response("Forced final answer."),
-        ])
+        llm.complete = AsyncMock(
+            side_effect=[
+                _tool_response([tool_call]),
+                _tool_response([tool_call]),
+                _text_response("Forced final answer."),
+            ]
+        )
 
         tool_registry = MagicMock()
         tool_registry.get_tool_defs.return_value = _make_tool_defs()
@@ -210,10 +216,12 @@ class TestToolExecutionErrorHandling:
         tool_call = ToolCall(id="tc1", name="search_messages", arguments={"query": "x"})
 
         llm = AsyncMock()
-        llm.complete = AsyncMock(side_effect=[
-            _tool_response([tool_call]),
-            _text_response("Could not find results."),
-        ])
+        llm.complete = AsyncMock(
+            side_effect=[
+                _tool_response([tool_call]),
+                _text_response("Could not find results."),
+            ]
+        )
 
         tool_registry = MagicMock()
         tool_registry.get_tool_defs.return_value = _make_tool_defs()

@@ -95,8 +95,7 @@ class MediaIndex:
             self._clip_model.eval()
 
             logger.info(
-                f"Initialized CLIP model '{self.config.clip_model}' "
-                f"on device '{self._clip_device}'"
+                f"Initialized CLIP model '{self.config.clip_model}' on device '{self._clip_device}'"
             )
 
         except ImportError as e:

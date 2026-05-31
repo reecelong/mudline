@@ -134,14 +134,16 @@ def extract_messages_for_handles(
             except (ValueError, OverflowError):
                 ts = None
 
-            messages.append({
-                "id": row["ROWID"],
-                "text": row["text"],
-                "handle": handle_map.get(row["handle_id"], "<you>"),
-                "is_from_me": bool(row["is_from_me"]),
-                "timestamp": ts,
-                "chat_id": row["chat_id"],
-            })
+            messages.append(
+                {
+                    "id": row["ROWID"],
+                    "text": row["text"],
+                    "handle": handle_map.get(row["handle_id"], "<you>"),
+                    "is_from_me": bool(row["is_from_me"]),
+                    "timestamp": ts,
+                    "chat_id": row["chat_id"],
+                }
+            )
 
         # Reverse so oldest first
         messages.reverse()
@@ -169,8 +171,9 @@ def main() -> int:
         return 1
 
     backup = backups[0]
-    print(f"Found: {backup.device_name} (iOS {backup.ios_version}, "
-          f"encrypted={backup.is_encrypted})")
+    print(
+        f"Found: {backup.device_name} (iOS {backup.ios_version}, encrypted={backup.is_encrypted})"
+    )
 
     # Step 2: Decrypt
     if not backup.is_encrypted:

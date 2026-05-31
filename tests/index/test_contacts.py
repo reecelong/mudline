@@ -61,9 +61,7 @@ def sample_contact_documents(sample_source: Source) -> list[Document]:
 class TestContactIndex:
     """Test the ContactIndex class."""
 
-    def test_load_from_documents(
-        self, sample_contact_documents: list[Document]
-    ) -> None:
+    def test_load_from_documents(self, sample_contact_documents: list[Document]) -> None:
         """Test loading contacts from documents."""
         index = ContactIndex()
         index.load_from_documents(sample_contact_documents)
@@ -115,9 +113,7 @@ class TestContactIndex:
         assert "john@example.com" in handles
         assert "john.smith" in handles
 
-    def test_resolve_case_insensitive(
-        self, sample_contact_documents: list[Document]
-    ) -> None:
+    def test_resolve_case_insensitive(self, sample_contact_documents: list[Document]) -> None:
         """Test that resolution is case-insensitive."""
         index = ContactIndex()
         index.load_from_documents(sample_contact_documents)
@@ -128,9 +124,7 @@ class TestContactIndex:
         handles = index.resolve("JOHN SMITH")
         assert "+15551234567" in handles
 
-    def test_resolve_first_name_only(
-        self, sample_contact_documents: list[Document]
-    ) -> None:
+    def test_resolve_first_name_only(self, sample_contact_documents: list[Document]) -> None:
         """Test resolving by first name only."""
         index = ContactIndex()
         index.load_from_documents(sample_contact_documents)
@@ -138,9 +132,7 @@ class TestContactIndex:
         handles = index.resolve("John")
         assert "+15551234567" in handles
 
-    def test_resolve_last_name_only(
-        self, sample_contact_documents: list[Document]
-    ) -> None:
+    def test_resolve_last_name_only(self, sample_contact_documents: list[Document]) -> None:
         """Test resolving by last name only."""
         index = ContactIndex()
         index.load_from_documents(sample_contact_documents)

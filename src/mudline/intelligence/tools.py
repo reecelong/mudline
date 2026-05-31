@@ -58,9 +58,7 @@ _SEARCH_MESSAGES_DEF = ToolDef(
 
 _SEARCH_NOTES_DEF = ToolDef(
     name="search_notes",
-    description=(
-        "Search Apple Notes. Use to find notes by content, title, or folder."
-    ),
+    description=("Search Apple Notes. Use to find notes by content, title, or folder."),
     parameters={
         "type": "object",
         "properties": {
@@ -93,9 +91,7 @@ _SEARCH_NOTES_DEF = ToolDef(
 
 _SEARCH_PHOTOS_DEF = ToolDef(
     name="search_photos",
-    description=(
-        "Search photos and videos by description, date, or location."
-    ),
+    description=("Search photos and videos by description, date, or location."),
     parameters={
         "type": "object",
         "properties": {

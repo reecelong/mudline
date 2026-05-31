@@ -20,11 +20,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Document types that are self-contained and need no expansion.
-_NO_EXPANSION_TYPES = frozenset({
-    DocumentType.NOTE,
-    DocumentType.CONTACT,
-    DocumentType.SAFARI,
-})
+_NO_EXPANSION_TYPES = frozenset(
+    {
+        DocumentType.NOTE,
+        DocumentType.CONTACT,
+        DocumentType.SAFARI,
+    }
+)
 
 
 @dataclass

@@ -58,9 +58,7 @@ class SafariExtractor:
         Returns:
             True if History.db exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Library/Safari/History.db"
-        )
+        return resolver.file_exists(self.domain, "Library/Safari/History.db")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract Safari history and bookmarks.
@@ -108,9 +106,7 @@ class SafariExtractor:
             ExtractionError: If the database is corrupt.
         """
         try:
-            history_path = resolver.resolve(
-                self.domain, "Library/Safari/History.db"
-            )
+            history_path = resolver.resolve(self.domain, "Library/Safari/History.db")
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Safari History database not found in backup: "
@@ -118,9 +114,7 @@ class SafariExtractor:
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{history_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{history_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open History database: {history_path}") from e
@@ -217,9 +211,7 @@ class SafariExtractor:
             ExtractionError: If the database is corrupt.
         """
         try:
-            bookmarks_path = resolver.resolve(
-                self.domain, "Library/Safari/Bookmarks.db"
-            )
+            bookmarks_path = resolver.resolve(self.domain, "Library/Safari/Bookmarks.db")
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Safari Bookmarks database not found in backup: "
@@ -227,9 +219,7 @@ class SafariExtractor:
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{bookmarks_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{bookmarks_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open Bookmarks database: {bookmarks_path}") from e

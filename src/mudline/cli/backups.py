@@ -75,7 +75,9 @@ def ingest(
         help="Path to the iOS backup directory. If omitted, auto-discovers the most recent backup.",
     ),
     password: str | None = typer.Option(
-        None, "--password", "-p",
+        None,
+        "--password",
+        "-p",
         help="Password for encrypted backups (prompted interactively if not provided).",
     ),
     data_dir: str = typer.Option(
@@ -84,7 +86,8 @@ def ingest(
         help="Directory for the Mudline index (default: ~/.mudline/data).",
     ),
     no_vectors: bool = typer.Option(
-        False, "--no-vectors",
+        False,
+        "--no-vectors",
         help="Skip vector embeddings (faster, uses only structured/FTS search).",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging."),
@@ -155,9 +158,7 @@ def ingest(
             try:
                 from mudline.index.vector import VectorStore, VectorStoreConfig
 
-                vector_store = VectorStore(
-                    VectorStoreConfig(persist_directory=data / "vectors")
-                )
+                vector_store = VectorStore(VectorStoreConfig(persist_directory=data / "vectors"))
             except Exception as exc:
                 console.print(
                     f"[yellow]Warning:[/yellow] Vector store unavailable ({exc}); "
@@ -183,9 +184,7 @@ def ingest(
                     logger.debug("Skipping %s (data not present)", extractor.data_type)
                     continue
 
-                task = progress.add_task(
-                    f"[cyan]{extractor.data_type}[/cyan]", total=None
-                )
+                task = progress.add_task(f"[cyan]{extractor.data_type}[/cyan]", total=None)
                 count = 0
 
                 def _on_progress(total: int, _task: int = task) -> None:
@@ -202,9 +201,7 @@ def ingest(
                     )
                     count = state.document_count
                 except Exception as exc:
-                    console.print(
-                        f"[red]Error extracting {extractor.data_type}:[/red] {exc}"
-                    )
+                    console.print(f"[red]Error extracting {extractor.data_type}:[/red] {exc}")
 
                 summary[extractor.data_type] = count
                 progress.update(task, completed=count)
@@ -244,7 +241,9 @@ def status(
     db_path = data / "index.db"
 
     if not db_path.exists():
-        console.print("[yellow]No index found.[/yellow] Run [bold]mudline backups ingest[/bold] first.")
+        console.print(
+            "[yellow]No index found.[/yellow] Run [bold]mudline backups ingest[/bold] first."
+        )
         raise typer.Exit(0)
 
     store = StructuredStore(db_path)
@@ -254,9 +253,7 @@ def status(
 
     conn = sqlite3.connect(str(db_path), timeout=5.0)
     try:
-        cursor = conn.execute(
-            "SELECT type, COUNT(*) FROM documents GROUP BY type ORDER BY type"
-        )
+        cursor = conn.execute("SELECT type, COUNT(*) FROM documents GROUP BY type ORDER BY type")
         rows = cursor.fetchall()
     finally:
         conn.close()

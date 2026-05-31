@@ -91,9 +91,7 @@ def sample_documents(sample_source: Source) -> list[Document]:
 class TestVectorStoreInitialization:
     """Tests for VectorStore initialization."""
 
-    def test_init_success(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_init_success(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test successful VectorStore initialization."""
         # Mock chromadb client and collection
         mock_client = MagicMock()
@@ -110,9 +108,7 @@ class TestVectorStoreInitialization:
         mock_chromadb.PersistentClient.assert_called_once()
         mock_client.get_or_create_collection.assert_called_once()
 
-    def test_init_import_error(
-        self, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_init_import_error(self, vector_config: VectorStoreConfig) -> None:
         """Test that SearchError is raised when chromadb import fails."""
         # Replace chromadb with a module that raises ImportError on attribute access
         mock_bad = MagicMock()
@@ -212,9 +208,7 @@ class TestVectorStoreAdd:
         assert metadatas[0]["thread_id"] == "1"
         assert metadatas[1]["document_type"] == "note"
 
-    def test_add_empty_list(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_add_empty_list(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test that adding empty list is a no-op."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -276,9 +270,7 @@ class TestVectorStoreAdd:
 class TestVectorStoreQuery:
     """Tests for the query() method."""
 
-    def test_query_success(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_query_success(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test successful query with results."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -343,9 +335,7 @@ class TestVectorStoreQuery:
             len(call_args[0]) > 3 and call_args[0][3] == where_filter
         )
 
-    def test_query_empty_text(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_query_empty_text(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test that empty query text raises SearchError."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -357,9 +347,7 @@ class TestVectorStoreQuery:
         with pytest.raises(SearchError, match="Query text cannot be empty"):
             store.query("")
 
-    def test_query_no_results(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_query_no_results(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test query with no results."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -425,9 +413,7 @@ class TestVectorStoreQuery:
 class TestVectorStorePersistence:
     """Tests for persistence methods."""
 
-    def test_persist_is_noop(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_persist_is_noop(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test that persist is a no-op with PersistentClient (auto-persists)."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -443,9 +429,7 @@ class TestVectorStorePersistence:
 class TestVectorStoreDelete:
     """Tests for the delete() method."""
 
-    def test_delete_documents(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_delete_documents(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test deleting documents by ID."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -458,9 +442,7 @@ class TestVectorStoreDelete:
 
         mock_collection.delete.assert_called_once_with(ids=["doc1", "doc2"])
 
-    def test_delete_empty_list(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_delete_empty_list(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test that deleting empty list is a no-op."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -492,9 +474,7 @@ class TestVectorStoreDelete:
 class TestVectorStoreClear:
     """Tests for the clear() method."""
 
-    def test_clear_documents(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_clear_documents(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test clearing all documents from the store."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -509,9 +489,7 @@ class TestVectorStoreClear:
         mock_collection.get.assert_called_once()
         mock_collection.delete.assert_called_once_with(ids=["doc1", "doc2", "doc3"])
 
-    def test_clear_empty_store(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_clear_empty_store(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test clearing an already empty store."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -544,9 +522,7 @@ class TestVectorStoreClear:
 class TestVectorStoreCount:
     """Tests for the count() method."""
 
-    def test_count_documents(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_count_documents(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test counting documents in the store."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
@@ -560,9 +536,7 @@ class TestVectorStoreCount:
 
         assert count == 3
 
-    def test_count_empty_store(
-        self, mock_chromadb: Mock, vector_config: VectorStoreConfig
-    ) -> None:
+    def test_count_empty_store(self, mock_chromadb: Mock, vector_config: VectorStoreConfig) -> None:
         """Test counting in an empty store."""
         mock_client = MagicMock()
         mock_collection = MagicMock()
