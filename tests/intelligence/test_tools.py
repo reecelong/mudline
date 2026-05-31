@@ -94,8 +94,13 @@ class TestToolDefs:
         registry, _, _ = _make_registry()
         names = {td.name for td in registry.get_tool_defs()}
         expected = {
-            "search_messages", "search_notes", "search_photos",
-            "get_contact", "get_call_history", "search_calendar", "search_safari",
+            "search_messages",
+            "search_notes",
+            "search_photos",
+            "get_contact",
+            "get_call_history",
+            "search_calendar",
+            "search_safari",
         }
         assert names == expected
 
@@ -125,7 +130,9 @@ class TestExecuteRouting:
 
         retriever.search.assert_called_once()
         call_kwargs = retriever.search.call_args
-        filters = call_kwargs.kwargs.get("filters") or call_kwargs[1].get("filters") or call_kwargs[0][1]
+        filters = (
+            call_kwargs.kwargs.get("filters") or call_kwargs[1].get("filters") or call_kwargs[0][1]
+        )
         assert DocumentType.MESSAGE in filters.data_types
         assert len(results) == 1
 
@@ -274,11 +281,14 @@ class TestFilterConstruction:
         registry, retriever, _ = _make_registry()
         retriever.search.return_value = []
 
-        registry.execute("search_messages", {
-            "query": "test",
-            "after": "2025-01-01T00:00:00",
-            "before": "2025-02-01T00:00:00",
-        })
+        registry.execute(
+            "search_messages",
+            {
+                "query": "test",
+                "after": "2025-01-01T00:00:00",
+                "before": "2025-02-01T00:00:00",
+            },
+        )
 
         call_args = retriever.search.call_args
         filters = call_args.kwargs.get("filters") or call_args[1].get("filters") or call_args[0][1]

@@ -85,11 +85,11 @@ def _parse_date(value: str) -> datetime:
 def _get_backup_date(data_dir: Path) -> str | None:
     """Get the backup date from the most recently ingested backup's Info.plist."""
     import sqlite3
+
     try:
         conn = sqlite3.connect(str(data_dir / "index.db"), timeout=5.0)
         row = conn.execute(
-            "SELECT backup_id FROM _ingest_state "
-            "ORDER BY started_at DESC LIMIT 1"
+            "SELECT backup_id FROM _ingest_state ORDER BY started_at DESC LIMIT 1"
         ).fetchone()
         conn.close()
         if not row:
@@ -102,6 +102,7 @@ def _get_backup_date(data_dir: Path) -> str | None:
             iso_ts = ":".join(parts[1:-1]) if len(parts) > 2 else parts[1]
             # Convert UTC to local time
             from datetime import timezone
+
             utc_dt = datetime.fromisoformat(iso_ts).replace(tzinfo=timezone.utc)
             local_dt = utc_dt.astimezone()
             return local_dt.strftime("%Y-%m-%d %H:%M")
@@ -119,18 +120,14 @@ def _truncate(text: str, max_len: int = 80) -> str:
 
 @app.command()
 def search(
-    query: Optional[str] = typer.Option(
-        None, "--query", "-q", help="Text search query."
-    ),
+    query: Optional[str] = typer.Option(None, "--query", "-q", help="Text search query."),
     type: Optional[str] = typer.Option(
         None,
         "--type",
         "-t",
         help="Document type filter (message, note, photo, contact, calendar, call, voicemail, safari).",
     ),
-    contact: Optional[str] = typer.Option(
-        None, "--contact", "-c", help="Contact name or handle."
-    ),
+    contact: Optional[str] = typer.Option(None, "--contact", "-c", help="Contact name or handle."),
     after: Optional[str] = typer.Option(
         None, "--after", "-a", help="Show results after this date (ISO format)."
     ),
@@ -209,11 +206,10 @@ def search(
 
 @app.command()
 def ask(
-    question: str = typer.Argument(
-        ..., help="Natural language question about your data."
-    ),
+    question: str = typer.Argument(..., help="Natural language question about your data."),
     provider: str = typer.Option(
-        "claude-code", "--provider",
+        "claude-code",
+        "--provider",
         help="LLM provider: claude-code (default, uses CLI), anthropic, or ollama.",
     ),
     model: Optional[str] = typer.Option(None, "--model", help="Model name override."),
@@ -269,9 +265,7 @@ async def _ask_async(
 
     if not route.needs_llm:
         # Fast path — structured search, no LLM calls
-        results = retriever.search(
-            query=route.search_query, filters=route.filters, limit=20
-        )
+        results = retriever.search(query=route.search_query, filters=route.filters, limit=20)
 
         if not results:
             console.print("[yellow]No results found.[/yellow]")
@@ -349,9 +343,7 @@ async def _ask_async(
             for item in all_docs:
                 doc = structured.get_by_id(item["id"])
                 if doc:
-                    results_for_expansion.append(
-                        Result(document=doc, score=item.get("score", 1.0))
-                    )
+                    results_for_expansion.append(Result(document=doc, score=item.get("score", 1.0)))
 
             if results_for_expansion:
                 expanded = context_expander.expand_batch(results_for_expansion)

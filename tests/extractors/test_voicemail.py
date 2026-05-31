@@ -138,9 +138,7 @@ def temp_backup(tmp_path: Path) -> Path:
 
     info_plist = backup_dir / "Info.plist"
     with open(info_plist, "wb") as f:
-        plistlib.dump(
-            {"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f
-        )
+        plistlib.dump({"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f)
 
     return backup_dir
 
@@ -214,9 +212,7 @@ class TestVoicemailExtractor:
         docs = list(extractor.extract(resolver))
 
         # Find the voicemail with transcription
-        transcribed = next(
-            (doc for doc in docs if "Call me back" in doc.text), None
-        )
+        transcribed = next((doc for doc in docs if "Call me back" in doc.text), None)
         assert transcribed is not None
         assert "Hey, it's John" in transcribed.text
 
@@ -241,9 +237,7 @@ class TestVoicemailExtractor:
         docs = list(extractor.extract(resolver))
 
         # Find the first voicemail
-        vm1 = next(
-            (doc for doc in docs if "John" in doc.text), None
-        )
+        vm1 = next((doc for doc in docs if "John" in doc.text), None)
         assert vm1 is not None
         assert vm1.metadata["handle"] == "+15551234567"
         assert vm1.metadata["duration_seconds"] == 42
@@ -292,9 +286,7 @@ class TestVoicemailExtractor:
         ids = [doc.id for doc in docs]
         assert len(ids) == len(set(ids))  # All IDs should be unique
 
-    def test_extractor_implements_protocol(
-        self, extractor: VoicemailExtractor
-    ) -> None:
+    def test_extractor_implements_protocol(self, extractor: VoicemailExtractor) -> None:
         """Test that VoicemailExtractor implements the Extractor protocol."""
         from mudline.models.extractor import Extractor
 

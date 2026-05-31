@@ -145,9 +145,7 @@ def temp_backup(tmp_path: Path) -> Path:
 
     info_plist = backup_dir / "Info.plist"
     with open(info_plist, "wb") as f:
-        plistlib.dump(
-            {"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f
-        )
+        plistlib.dump({"Last Backup Date": datetime(2026, 2, 15, 10, 0, 0)}, f)
 
     return backup_dir
 
@@ -175,9 +173,7 @@ class TestPhotoExtractor:
         """Test that can_extract returns True when Photos.sqlite exists."""
         assert extractor.can_extract(resolver) is True
 
-    def test_can_extract_without_photos_db(
-        self, extractor: PhotoExtractor, tmp_path: Path
-    ) -> None:
+    def test_can_extract_without_photos_db(self, extractor: PhotoExtractor, tmp_path: Path) -> None:
         """Test that can_extract returns False when Photos.sqlite is missing."""
         # Create a minimal backup without Photos.sqlite
         backup_dir = tmp_path / "empty_backup"
@@ -202,9 +198,7 @@ class TestPhotoExtractor:
         resolver = ManifestResolver(backup_dir)
         assert extractor.can_extract(resolver) is False
 
-    def test_extract_photos(
-        self, extractor: PhotoExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_extract_photos(self, extractor: PhotoExtractor, resolver: ManifestResolver) -> None:
         """Test extracting photos from the temporary backup."""
         docs = list(extractor.extract(resolver))
 
@@ -214,9 +208,7 @@ class TestPhotoExtractor:
         # All should be PHOTO type
         assert all(doc.type == DocumentType.PHOTO for doc in docs)
 
-    def test_photo_metadata(
-        self, extractor: PhotoExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_photo_metadata(self, extractor: PhotoExtractor, resolver: ManifestResolver) -> None:
         """Test that photo metadata is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -229,9 +221,7 @@ class TestPhotoExtractor:
         assert photo.metadata["longitude"] == pytest.approx(-122.4194)
         assert photo.metadata["album"] == "Favorites"
 
-    def test_video_metadata(
-        self, extractor: PhotoExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_video_metadata(self, extractor: PhotoExtractor, resolver: ManifestResolver) -> None:
         """Test that video metadata is correctly extracted."""
         docs = list(extractor.extract(resolver))
 
@@ -254,9 +244,7 @@ class TestPhotoExtractor:
             assert doc.timestamp.year == 2026
             assert doc.timestamp.month == 2
 
-    def test_source_provenance(
-        self, extractor: PhotoExtractor, resolver: ManifestResolver
-    ) -> None:
+    def test_source_provenance(self, extractor: PhotoExtractor, resolver: ManifestResolver) -> None:
         """Test that source provenance is correctly set."""
         docs = list(extractor.extract(resolver))
 
@@ -275,9 +263,7 @@ class TestPhotoExtractor:
         ids = [doc.id for doc in docs]
         assert len(ids) == len(set(ids))  # All IDs should be unique
 
-    def test_extractor_implements_protocol(
-        self, extractor: PhotoExtractor
-    ) -> None:
+    def test_extractor_implements_protocol(self, extractor: PhotoExtractor) -> None:
         """Test that PhotoExtractor implements the Extractor protocol."""
         from mudline.models.extractor import Extractor
 

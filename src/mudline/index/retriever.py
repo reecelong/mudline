@@ -264,9 +264,7 @@ class HybridRetriever:
             if around_timestamp:
                 # Split documents into before/after
                 before = [d for d in thread_docs if d.timestamp and d.timestamp <= around_timestamp]
-                after = [
-                    d for d in thread_docs if d.timestamp and d.timestamp > around_timestamp
-                ]
+                after = [d for d in thread_docs if d.timestamp and d.timestamp > around_timestamp]
 
                 # Sort and combine
                 before.sort(key=lambda d: d.timestamp, reverse=True)
@@ -275,7 +273,7 @@ class HybridRetriever:
                 # Take half from each side
                 half_window = window // 2
                 result = before[:half_window]
-                result.extend(after[:window - half_window])
+                result.extend(after[: window - half_window])
                 result.sort(key=lambda d: d.timestamp or datetime.min)
                 return result
 

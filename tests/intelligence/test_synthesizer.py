@@ -108,18 +108,20 @@ class TestSynthesizeWithEvidence:
         )
 
         synth = Synthesizer(llm=llm)
-        plan = _make_plan_result(tool_results={
-            "tc1": [
-                {
-                    "id": "msg1",
-                    "text": "the plumber is coming tomorrow",
-                    "timestamp": "2025-01-15T10:30:00",
-                    "type": "message",
-                    "metadata": {"handle": "+15551234567", "is_from_me": False},
-                    "score": 0.9,
-                },
-            ],
-        })
+        plan = _make_plan_result(
+            tool_results={
+                "tc1": [
+                    {
+                        "id": "msg1",
+                        "text": "the plumber is coming tomorrow",
+                        "timestamp": "2025-01-15T10:30:00",
+                        "type": "message",
+                        "metadata": {"handle": "+15551234567", "is_from_me": False},
+                        "score": 0.9,
+                    },
+                ],
+            }
+        )
 
         answer = await synth.synthesize("what did Sarah say about the plumber?", plan)
 
@@ -139,18 +141,20 @@ class TestSynthesizeWithEvidence:
         llm.complete.return_value = LLMResponse(content="answer", model="test")
 
         synth = Synthesizer(llm=llm)
-        plan = _make_plan_result(tool_results={
-            "tc1": [
-                {
-                    "id": "doc1",
-                    "text": "message text here",
-                    "timestamp": "2025-01-15T10:30:00",
-                    "type": "message",
-                    "metadata": {"handle": "+1555"},
-                    "score": 0.9,
-                },
-            ],
-        })
+        plan = _make_plan_result(
+            tool_results={
+                "tc1": [
+                    {
+                        "id": "doc1",
+                        "text": "message text here",
+                        "timestamp": "2025-01-15T10:30:00",
+                        "type": "message",
+                        "metadata": {"handle": "+1555"},
+                        "score": 0.9,
+                    },
+                ],
+            }
+        )
 
         answer = await synth.synthesize("query", plan)
 

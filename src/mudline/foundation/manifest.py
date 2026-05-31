@@ -57,9 +57,7 @@ class ManifestResolver:
         BackupNotFoundError: If backup_path doesn't exist or Manifest.db is missing.
     """
 
-    def __init__(
-        self, backup_path: Path, decryptor: KeybagDecryptor | None = None
-    ) -> None:
+    def __init__(self, backup_path: Path, decryptor: KeybagDecryptor | None = None) -> None:
         self._backup_path = backup_path
         self._decryptor = decryptor
         self._encrypted = False
@@ -69,16 +67,12 @@ class ManifestResolver:
 
         raw_db_path = backup_path / "Manifest.db"
         if not raw_db_path.exists():
-            raise BackupNotFoundError(
-                f"Manifest.db not found in backup: {backup_path}"
-            )
+            raise BackupNotFoundError(f"Manifest.db not found in backup: {backup_path}")
 
         # Try opening the raw Manifest.db first. If it's encrypted (not valid
         # SQLite), fall back to the decryptor's decrypted copy.
         try:
-            conn = sqlite3.connect(
-                f"file:{raw_db_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{raw_db_path}?mode=ro&immutable=1", uri=True)
             conn.execute("SELECT 1 FROM Files LIMIT 1")
             conn.close()
             self._db_path = raw_db_path
@@ -93,15 +87,11 @@ class ManifestResolver:
             self._encrypted = True
             # Validate the decrypted copy
             try:
-                conn = sqlite3.connect(
-                    f"file:{self._db_path}?mode=ro", uri=True
-                )
+                conn = sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
                 conn.execute("SELECT 1 FROM Files LIMIT 1")
                 conn.close()
             except sqlite3.Error as e:
-                raise BackupNotFoundError(
-                    f"Decrypted Manifest.db is not valid: {e}"
-                ) from e
+                raise BackupNotFoundError(f"Decrypted Manifest.db is not valid: {e}") from e
 
         logger.debug(
             "ManifestResolver initialized for %s (encrypted=%s)",
@@ -122,9 +112,7 @@ class ManifestResolver:
         """
         if self._encrypted:
             return sqlite3.connect(f"file:{self._db_path}?mode=ro", uri=True)
-        return sqlite3.connect(
-            f"file:{self._db_path}?mode=ro&immutable=1", uri=True
-        )
+        return sqlite3.connect(f"file:{self._db_path}?mode=ro&immutable=1", uri=True)
 
     def resolve(self, domain: str, relative_path: str) -> Path:
         """Resolve a domain + relative path to a usable file on disk.
@@ -159,9 +147,7 @@ class ManifestResolver:
             conn.close()
 
         if row is None:
-            raise FileNotFoundError(
-                f"File not in manifest: {domain}/{relative_path}"
-            )
+            raise FileNotFoundError(f"File not in manifest: {domain}/{relative_path}")
 
         file_id: str = row[0]
         file_path = self._backup_path / file_id[:2] / file_id
@@ -201,9 +187,7 @@ class ManifestResolver:
 
         # Verify the file exists in the manifest
         if not self.file_exists(domain, relative_path):
-            raise FileNotFoundError(
-                f"File not in manifest: {domain}/{relative_path}"
-            )
+            raise FileNotFoundError(f"File not in manifest: {domain}/{relative_path}")
 
         return self._decryptor.decrypt_file(domain, relative_path)
 
@@ -243,9 +227,7 @@ class ManifestResolver:
         """
         conn = self._connect()
         try:
-            cursor = conn.execute(
-                "SELECT DISTINCT domain FROM Files ORDER BY domain"
-            )
+            cursor = conn.execute("SELECT DISTINCT domain FROM Files ORDER BY domain")
             return [row[0] for row in cursor.fetchall()]
         finally:
             conn.close()

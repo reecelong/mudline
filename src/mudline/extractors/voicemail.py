@@ -58,9 +58,7 @@ class VoicemailExtractor:
         Returns:
             True if voicemail.db exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Library/Voicemail/voicemail.db"
-        )
+        return resolver.file_exists(self.domain, "Library/Voicemail/voicemail.db")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all voicemail messages from the Voicemail database.
@@ -76,9 +74,7 @@ class VoicemailExtractor:
             ExtractionError: If the database schema is unexpected.
         """
         try:
-            voicemail_path = resolver.resolve(
-                self.domain, "Library/Voicemail/voicemail.db"
-            )
+            voicemail_path = resolver.resolve(self.domain, "Library/Voicemail/voicemail.db")
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Voicemail database not found in backup: "
@@ -86,9 +82,7 @@ class VoicemailExtractor:
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{voicemail_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{voicemail_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open Voicemail database: {voicemail_path}") from e
@@ -137,9 +131,7 @@ class VoicemailExtractor:
                 duration_seconds = int(duration) if duration else 0
 
                 # Build text content
-                text = transcription or (
-                    f"Voicemail from {sender}" if sender else "Voicemail"
-                )
+                text = transcription or (f"Voicemail from {sender}" if sender else "Voicemail")
 
                 # Build metadata
                 metadata = {

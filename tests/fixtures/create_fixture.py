@@ -186,7 +186,10 @@ def create_sms_db() -> bytes:
 
     # Chat-message joins
     chat_msgs = [
-        (3, 1), (3, 2), (3, 3), (3, 4),  # Sarah conversation
+        (3, 1),
+        (3, 2),
+        (3, 3),
+        (3, 4),  # Sarah conversation
         (1, 5),  # Direct message
         (2, 6),  # Family group
     ]
@@ -270,9 +273,9 @@ def create_call_history_db() -> bytes:
     ct2h = cocoa_timestamp(base_time + timedelta(hours=2))
     ct1d = cocoa_timestamp(base_time + timedelta(days=1))
     calls = [
-        (1, "+15559876543", 185.0, ct0, 1, 1),   # outgoing answered
-        (2, "+15551234567", 0.0, ct2h, 0, 0),     # incoming missed
-        (3, "+15551112222", 42.0, ct1d, 0, 1),    # incoming answered
+        (1, "+15559876543", 185.0, ct0, 1, 1),  # outgoing answered
+        (2, "+15551234567", 0.0, ct2h, 0, 0),  # incoming missed
+        (3, "+15551112222", 42.0, ct1d, 0, 1),  # incoming answered
     ]
     conn.executemany("INSERT INTO ZCALLRECORD VALUES (?, ?, ?, ?, ?, ?)", calls)
 
@@ -287,6 +290,7 @@ def main() -> None:
     """Generate the complete test fixture."""
     if FIXTURE_DIR.exists():
         import shutil
+
         shutil.rmtree(FIXTURE_DIR)
 
     FIXTURE_DIR.mkdir(parents=True)

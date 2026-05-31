@@ -59,9 +59,7 @@ class PhotoExtractor:
         Returns:
             True if Photos.sqlite exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Media/PhotoData/Photos.sqlite"
-        )
+        return resolver.file_exists(self.domain, "Media/PhotoData/Photos.sqlite")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all photos and videos from the Photos database.
@@ -77,19 +75,14 @@ class PhotoExtractor:
             ExtractionError: If the database schema is unexpected.
         """
         try:
-            photos_path = resolver.resolve(
-                self.domain, "Media/PhotoData/Photos.sqlite"
-            )
+            photos_path = resolver.resolve(self.domain, "Media/PhotoData/Photos.sqlite")
         except FileNotFoundError as e:
             raise FileNotFoundError(
-                f"Photos database not found in backup: "
-                f"{self.domain}/Media/PhotoData/Photos.sqlite"
+                f"Photos database not found in backup: {self.domain}/Media/PhotoData/Photos.sqlite"
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{photos_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{photos_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open Photos database: {photos_path}") from e
@@ -203,9 +196,7 @@ class PhotoExtractor:
         """
         albums: dict[int, str] = {}
         try:
-            cursor = conn.execute(
-                "SELECT Z_PK, ZTITLE FROM ZGENERICALBUM WHERE ZTITLE IS NOT NULL"
-            )
+            cursor = conn.execute("SELECT Z_PK, ZTITLE FROM ZGENERICALBUM WHERE ZTITLE IS NOT NULL")
             for row in cursor:
                 albums[row[0]] = row[1]
         except sqlite3.Error as e:
@@ -223,9 +214,7 @@ class PhotoExtractor:
         """
         asset_albums: dict[int, list[int]] = {}
         try:
-            cursor = conn.execute(
-                "SELECT Z_26ALBUMS, Z_34ASSETS FROM Z_26ASSETS"
-            )
+            cursor = conn.execute("SELECT Z_26ALBUMS, Z_34ASSETS FROM Z_26ASSETS")
             for row in cursor:
                 album_id = row[0]
                 asset_id = row[1]

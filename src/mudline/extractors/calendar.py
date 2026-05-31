@@ -58,9 +58,7 @@ class CalendarExtractor:
         Returns:
             True if Calendar.sqlitedb exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Library/Calendar/Calendar.sqlitedb"
-        )
+        return resolver.file_exists(self.domain, "Library/Calendar/Calendar.sqlitedb")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all calendar events from the Calendar database.
@@ -76,9 +74,7 @@ class CalendarExtractor:
             ExtractionError: If the database schema is unexpected.
         """
         try:
-            calendar_path = resolver.resolve(
-                self.domain, "Library/Calendar/Calendar.sqlitedb"
-            )
+            calendar_path = resolver.resolve(self.domain, "Library/Calendar/Calendar.sqlitedb")
         except FileNotFoundError as e:
             raise FileNotFoundError(
                 f"Calendar database not found in backup: "
@@ -86,9 +82,7 @@ class CalendarExtractor:
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{calendar_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{calendar_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open Calendar database: {calendar_path}") from e

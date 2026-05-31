@@ -86,9 +86,7 @@ class CallHistoryExtractor:
         Returns:
             True if CallHistory.storedata exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Library/CallHistoryDB/CallHistory.storedata"
-        )
+        return resolver.file_exists(self.domain, "Library/CallHistoryDB/CallHistory.storedata")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all calls from the call history database.
@@ -115,9 +113,7 @@ class CallHistoryExtractor:
 
         # Connect to the call history database in read-only mode
         try:
-            conn = sqlite3.connect(
-                f"file:{call_history_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{call_history_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(

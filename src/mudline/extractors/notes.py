@@ -61,9 +61,7 @@ class NoteExtractor:
         Returns:
             True if NoteStore.sqlite exists, False otherwise.
         """
-        return resolver.file_exists(
-            self.domain, "Library/Notes/NoteStore.sqlite"
-        )
+        return resolver.file_exists(self.domain, "Library/Notes/NoteStore.sqlite")
 
     def extract(self, resolver: ResourceResolver) -> Iterator[Document]:
         """Extract all notes from the Notes database.
@@ -79,19 +77,14 @@ class NoteExtractor:
             ExtractionError: If the database schema is unexpected.
         """
         try:
-            notes_path = resolver.resolve(
-                self.domain, "Library/Notes/NoteStore.sqlite"
-            )
+            notes_path = resolver.resolve(self.domain, "Library/Notes/NoteStore.sqlite")
         except FileNotFoundError as e:
             raise FileNotFoundError(
-                f"Notes database not found in backup: "
-                f"{self.domain}/Library/Notes/NoteStore.sqlite"
+                f"Notes database not found in backup: {self.domain}/Library/Notes/NoteStore.sqlite"
             ) from e
 
         try:
-            conn = sqlite3.connect(
-                f"file:{notes_path}?mode=ro&immutable=1", uri=True
-            )
+            conn = sqlite3.connect(f"file:{notes_path}?mode=ro&immutable=1", uri=True)
             conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             raise ExtractionError(f"Failed to open Notes database: {notes_path}") from e

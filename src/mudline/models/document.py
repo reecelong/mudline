@@ -23,6 +23,7 @@ class DocumentType(StrEnum):
     source-agnostic type for downstream engine consumers (e.g. audio/call
     transcripts) so they can produce Documents without forking this enum.
     """
+
     MESSAGE = "message"
     PHOTO = "photo"
     NOTE = "note"
@@ -37,18 +38,20 @@ class DocumentType(StrEnum):
 @dataclass(frozen=True)
 class Source:
     """Provenance tracking — where this document came from."""
-    backup_id: str            # UDID + backup timestamp
-    domain: str               # iOS backup domain (e.g., "HomeDomain")
-    relative_path: str        # Path within the domain
-    backup_timestamp: datetime # When the backup was taken
+
+    backup_id: str  # UDID + backup timestamp
+    domain: str  # iOS backup domain (e.g., "HomeDomain")
+    relative_path: str  # Path within the domain
+    backup_timestamp: datetime  # When the backup was taken
 
 
 @dataclass
 class Attachment:
     """Reference to a binary file (photo, audio, etc.)."""
+
     filename: str
     mime_type: str
-    path: Path | None = None   # Resolved path in backup, None if unresolvable
+    path: Path | None = None  # Resolved path in backup, None if unresolvable
     size_bytes: int | None = None
 
 
@@ -71,6 +74,7 @@ class Document:
         attachments: Binary file references.
         id: Deterministic unique identifier. Auto-generated if not provided.
     """
+
     type: DocumentType
     text: str
     source: Source

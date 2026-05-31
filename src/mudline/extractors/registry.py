@@ -83,48 +83,56 @@ default_registry = ExtractorRegistry()
 # Register all built-in extractors
 try:
     from mudline.extractors.calendar import CalendarExtractor
+
     default_registry.register("calendar", CalendarExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import CalendarExtractor: {e}")
 
 try:
     from mudline.extractors.calls import CallHistoryExtractor
+
     default_registry.register("calls", CallHistoryExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import CallHistoryExtractor: {e}")
 
 try:
     from mudline.extractors.contacts import ContactExtractor
+
     default_registry.register("contacts", ContactExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import ContactExtractor: {e}")
 
 try:
     from mudline.extractors.messages import MessageExtractor
+
     default_registry.register("messages", MessageExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import MessageExtractor: {e}")
 
 try:
     from mudline.extractors.notes import NoteExtractor
+
     default_registry.register("notes", NoteExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import NoteExtractor: {e}")
 
 try:
     from mudline.extractors.photos import PhotoExtractor
+
     default_registry.register("photos", PhotoExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import PhotoExtractor: {e}")
 
 try:
     from mudline.extractors.safari import SafariExtractor
+
     default_registry.register("safari", SafariExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import SafariExtractor: {e}")
 
 try:
     from mudline.extractors.voicemail import VoicemailExtractor
+
     default_registry.register("voicemail", VoicemailExtractor)
 except ImportError as e:
     logger.warning(f"Failed to import VoicemailExtractor: {e}")

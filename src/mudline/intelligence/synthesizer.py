@@ -187,9 +187,7 @@ class Synthesizer:
 
         return "\n\n".join(sections)
 
-    def _build_citations(
-        self, doc_lookup: dict[str, Document | dict[str, Any]]
-    ) -> list[Citation]:
+    def _build_citations(self, doc_lookup: dict[str, Document | dict[str, Any]]) -> list[Citation]:
         """Build Citation objects for all evidence documents.
 
         Handles both Document objects (from expanded results) and serialized

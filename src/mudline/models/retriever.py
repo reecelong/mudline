@@ -21,23 +21,25 @@ class Filters:
 
     All fields are optional. When multiple fields are set, they are ANDed together.
     """
+
     data_types: list[DocumentType] | None = None  # Filter to specific types
-    contacts: list[str] | None = None              # Filter by contact handles
-    date_after: datetime | None = None             # Documents after this date
-    date_before: datetime | None = None            # Documents before this date
-    has_attachments: bool | None = None            # Only docs with/without attachments
-    backup_id: str | None = None                   # Restrict to specific backup
-    thread_id: int | None = None                   # Specific conversation thread
-    metadata: dict[str, str] | None = None         # Arbitrary metadata key-value filters
+    contacts: list[str] | None = None  # Filter by contact handles
+    date_after: datetime | None = None  # Documents after this date
+    date_before: datetime | None = None  # Documents before this date
+    has_attachments: bool | None = None  # Only docs with/without attachments
+    backup_id: str | None = None  # Restrict to specific backup
+    thread_id: int | None = None  # Specific conversation thread
+    metadata: dict[str, str] | None = None  # Arbitrary metadata key-value filters
 
 
 @dataclass
 class Result:
     """A single search result with scoring and provenance."""
+
     document: Document
-    score: float                                   # 0.0-1.0, higher is more relevant
+    score: float  # 0.0-1.0, higher is more relevant
     highlights: list[str] = field(default_factory=list)  # Matching text snippets
-    match_type: str = "hybrid"                     # "structured", "semantic", or "hybrid"
+    match_type: str = "hybrid"  # "structured", "semantic", or "hybrid"
 
 
 @runtime_checkable

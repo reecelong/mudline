@@ -35,16 +35,12 @@ class TestManifestResolver:
 
     def test_resolve_contacts_db(self, backup_path: Path) -> None:
         resolver = ManifestResolver(backup_path)
-        path = resolver.resolve(
-            "HomeDomain", "Library/AddressBook/AddressBook.sqlitedb"
-        )
+        path = resolver.resolve("HomeDomain", "Library/AddressBook/AddressBook.sqlitedb")
         assert path.exists()
 
     def test_resolve_call_history(self, backup_path: Path) -> None:
         resolver = ManifestResolver(backup_path)
-        path = resolver.resolve(
-            "HomeDomain", "Library/CallHistoryDB/CallHistory.storedata"
-        )
+        path = resolver.resolve("HomeDomain", "Library/CallHistoryDB/CallHistory.storedata")
         assert path.exists()
 
     def test_resolve_not_in_manifest(self, backup_path: Path) -> None:
@@ -92,9 +88,7 @@ class TestManifestResolver:
     def test_file_record_fields(self, backup_path: Path) -> None:
         resolver = ManifestResolver(backup_path)
         files = resolver.list_domain("HomeDomain")
-        sms_files = [
-            f for f in files if f.relative_path == "Library/SMS/sms.db"
-        ]
+        sms_files = [f for f in files if f.relative_path == "Library/SMS/sms.db"]
         assert len(sms_files) == 1
         record = sms_files[0]
         assert record.domain == "HomeDomain"
