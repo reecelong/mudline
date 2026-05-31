@@ -118,7 +118,7 @@ class TestAnthropicProvider:
         mock_response.usage.input_tokens = 10
         mock_response.usage.output_tokens = 5
 
-        provider.client.messages.create = MagicMock(return_value=mock_response)
+        provider.client.messages.create = AsyncMock(return_value=mock_response)
 
         messages = [Message(role="user", content="Hi")]
         response = await provider.complete(messages)
@@ -148,7 +148,7 @@ class TestAnthropicProvider:
         mock_response.usage.input_tokens = 20
         mock_response.usage.output_tokens = 15
 
-        provider.client.messages.create = MagicMock(return_value=mock_response)
+        provider.client.messages.create = AsyncMock(return_value=mock_response)
 
         tools = [
             ToolDef(
