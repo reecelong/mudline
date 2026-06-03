@@ -100,6 +100,7 @@ class HybridRetriever:
             contact=filters.contacts[0] if filters.contacts else None,
             after=filters.date_after,
             before=filters.date_before,
+            metadata=filters.metadata,
             limit=limit,
         )
 
@@ -173,6 +174,7 @@ class HybridRetriever:
             after=filters.date_after,
             before=filters.date_before,
             text_search=query,
+            metadata=filters.metadata,
             limit=limit * 2,  # Get extra results to re-rank
         )
 

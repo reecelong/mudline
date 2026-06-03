@@ -612,3 +612,143 @@ class TestDeleteAll:
         """Test deleting from an already empty store."""
         store.delete_all()
         assert store.count() == 0
+
+
+@pytest.fixture
+def transcript_source() -> Source:
+    """Provenance for a generic (non-iOS) transcript document."""
+    return Source(
+        backup_id="external",
+        domain="audio",
+        relative_path="recordings/session-1.wav",
+        backup_timestamp=datetime(2024, 6, 2, 9, 0, 0),
+    )
+
+
+def _transcript(source: Source, *, text: str, metadata: dict[str, object]) -> Document:
+    """Build a TRANSCRIPT document carrying arbitrary metadata."""
+    return Document(
+        type=DocumentType.TRANSCRIPT,
+        text=text,
+        source=source,
+        timestamp=datetime(2024, 6, 2, 9, 5, 0),
+        metadata=metadata,
+    )
+
+
+class TestMetadataFiltering:
+    """Tests for generic, domain-agnostic metadata filtering (bpw)."""
+
+    def test_filter_by_indexed_key(self, transcript_source: Source) -> None:
+        """A declared indexed key filters through the structured query path."""
+        store = StructuredStore(indexed_metadata_keys=("session_id", "topic"))
+        store.insert_batch(
+            [
+                _transcript(
+                    transcript_source,
+                    text="intro to widgets",
+                    metadata={"session_id": "S1", "topic": "widgets"},
+                ),
+                _transcript(
+                    transcript_source,
+                    text="more on gadgets",
+                    metadata={"session_id": "S2", "topic": "gadgets"},
+                ),
+            ]
+        )
+
+        results = store.query(metadata={"session_id": "S1"})
+        assert len(results) == 1
+        assert results[0].metadata["topic"] == "widgets"
+
+    def test_filter_by_multiple_keys_anded(self, transcript_source: Source) -> None:
+        """Multiple metadata filters are ANDed together."""
+        store = StructuredStore(indexed_metadata_keys=("session_id", "topic"))
+        store.insert_batch(
+            [
+                _transcript(
+                    transcript_source, text="a", metadata={"session_id": "S1", "topic": "x"}
+                ),
+                _transcript(
+                    transcript_source, text="b", metadata={"session_id": "S1", "topic": "y"}
+                ),
+            ]
+        )
+
+        results = store.query(metadata={"session_id": "S1", "topic": "y"})
+        assert len(results) == 1
+        assert results[0].text == "b"
+
+    def test_filter_pushed_down_before_limit(self, transcript_source: Source) -> None:
+        """The match survives even when it sorts past LIMIT among non-matches.
+
+        Filtering must happen in SQL, not as a post-LIMIT scan in Python.
+        """
+        store = StructuredStore(indexed_metadata_keys=("topic",))
+        docs = [
+            _transcript(transcript_source, text=f"filler {i}", metadata={"topic": "common"})
+            for i in range(20)
+        ]
+        docs.append(_transcript(transcript_source, text="the rare one", metadata={"topic": "rare"}))
+        store.insert_batch(docs)
+
+        results = store.query(metadata={"topic": "rare"}, limit=5)
+        assert [r.text for r in results] == ["the rare one"]
+
+    def test_fts_over_transcript_text(self, transcript_source: Source) -> None:
+        """FTS works over transcript text and composes with a metadata filter."""
+        store = StructuredStore(indexed_metadata_keys=("topic",))
+        store.insert_batch(
+            [
+                _transcript(
+                    transcript_source,
+                    text="the plumber is coming on Tuesday",
+                    metadata={"topic": "home"},
+                ),
+                _transcript(
+                    transcript_source,
+                    text="completely unrelated gardening notes",
+                    metadata={"topic": "home"},
+                ),
+            ]
+        )
+
+        results = store.query(text_search="plumber")
+        assert len(results) == 1
+        assert "plumber" in results[0].text
+
+        results = store.query(text_search="plumber", metadata={"topic": "home"})
+        assert len(results) == 1
+
+    def test_json_extract_fallback_for_undeclared_key(
+        self, store: StructuredStore, message_doc: Document
+    ) -> None:
+        """Any metadata key filters even when not declared as indexed."""
+        store.insert(message_doc)  # metadata carries handle="+15551234567"
+        assert len(store.query(metadata={"handle": "+15551234567"})) == 1
+        assert len(store.query(metadata={"handle": "+10000000000"})) == 0
+
+    def test_filtering_without_indexed_keys(self, transcript_source: Source) -> None:
+        """The default store (no declared keys) still filters via json_extract."""
+        store = StructuredStore()
+        store.insert(_transcript(transcript_source, text="hi", metadata={"topic": "x"}))
+        assert len(store.query(metadata={"topic": "x"})) == 1
+        assert len(store.query(metadata={"topic": "z"})) == 0
+
+    def test_existing_types_unaffected(
+        self,
+        store: StructuredStore,
+        message_doc: Document,
+        contact_doc: Document,
+        photo_doc: Document,
+    ) -> None:
+        """iOS documents are unaffected; a metadata filter they lack excludes them."""
+        store.insert_batch([message_doc, contact_doc, photo_doc])
+        assert store.count() == 3
+        assert store.query(metadata={"topic": "anything"}) == []
+        assert len(store.query(limit=100)) == 3
+
+    def test_invalid_indexed_key_rejected(self) -> None:
+        """Indexed metadata keys must be valid identifiers."""
+        with pytest.raises(ValueError, match="valid identifiers"):
+            StructuredStore(indexed_metadata_keys=("bad key!",))

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,25 +22,40 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Metadata keys eligible for opt-in indexing must be valid identifiers, so the
+# key can be embedded safely in the json_extract path and the index name.
+_SAFE_METADATA_KEY = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
 
 @dataclass
 class StructuredStore:
     """SQLite-backed store for documents with FTS5 full-text search.
 
     The store maintains a normalized documents table with type, timestamp,
-    contact_handle, thread_id, domain columns and supports arbitrary JSONB
-    metadata. Full-text search is powered by SQLite FTS5.
+    contact_handle, thread_id, domain columns and supports arbitrary JSON
+    metadata. Any metadata key can be filtered via ``query(metadata=...)``;
+    keys listed in ``indexed_metadata_keys`` additionally get an expression
+    index so the filter is efficient. The engine stays domain-agnostic — it
+    indexes whatever keys a consumer declares without knowing their meaning.
 
     Args:
         db_path: Path to SQLite database file. Use ":memory:" for in-memory.
+        indexed_metadata_keys: Metadata keys to back with an expression index
+            for efficient filtering. Each must be a valid identifier.
     """
 
     db_path: str | Path = ":memory:"
+    indexed_metadata_keys: tuple[str, ...] = ()
     _conn: sqlite3.Connection | None = None
 
     def __post_init__(self) -> None:
-        """Initialize database schema on first use."""
+        """Validate configuration and initialize database schema on first use."""
         object.__setattr__(self, "db_path", str(self.db_path))
+        for key in self.indexed_metadata_keys:
+            if not _SAFE_METADATA_KEY.match(key):
+                raise ValueError(
+                    f"indexed_metadata_keys entries must be valid identifiers, got {key!r}"
+                )
         self._init_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -126,6 +142,15 @@ class StructuredStore:
                 ON documents(domain)
                 """
             )
+            # Opt-in expression indexes over declared metadata keys, so consumers
+            # can make arbitrary metadata fields efficiently filterable without
+            # the engine knowing their domain meaning. Keys are validated as
+            # identifiers in __post_init__, so the interpolation here is safe.
+            for key in self.indexed_metadata_keys:
+                cursor.execute(
+                    f"CREATE INDEX IF NOT EXISTS idx_meta_{key} "
+                    f"ON documents(json_extract(metadata, '$.{key}'))"
+                )
 
             # FTS5 virtual table for full-text search
             cursor.execute(
@@ -177,7 +202,9 @@ class StructuredStore:
                 cursor = conn.cursor()
 
                 for doc in docs:
-                    # Extract contact_handle and thread_id from metadata
+                    # Promote a couple of common metadata fields to dedicated
+                    # columns. Everything else stays in the metadata JSON and is
+                    # filterable via json_extract (optionally index-backed).
                     contact_handle = None
                     thread_id = None
 
@@ -248,6 +275,7 @@ class StructuredStore:
         after: datetime | None = None,
         before: datetime | None = None,
         text_search: str | None = None,
+        metadata: dict[str, str] | None = None,
         limit: int = 100,
     ) -> list[Document]:
         """Query documents with optional filters and full-text search.
@@ -260,6 +288,10 @@ class StructuredStore:
             after: Filter to documents with timestamp >= this datetime.
             before: Filter to documents with timestamp <= this datetime.
             text_search: Full-text search query.
+            metadata: Metadata key/value equality filters, ANDed together and
+                applied in SQL via json_extract. Keys declared in
+                indexed_metadata_keys are backed by an expression index; any
+                other key is matched without an index.
             limit: Maximum number of results to return.
 
         Returns:
@@ -281,10 +313,13 @@ class StructuredStore:
                         contact,
                         after,
                         before,
+                        metadata,
                         limit,
                     )
                 else:
-                    results = self._sql_query(cursor, type_filter, contact, after, before, limit)
+                    results = self._sql_query(
+                        cursor, type_filter, contact, after, before, metadata, limit
+                    )
 
                 return results
 
@@ -300,6 +335,7 @@ class StructuredStore:
         contact: str | None = None,
         after: datetime | None = None,
         before: datetime | None = None,
+        metadata: dict[str, str] | None = None,
         limit: int = 100,
     ) -> list[Document]:
         """Execute FTS query with optional SQL filters."""
@@ -335,6 +371,12 @@ class StructuredStore:
             query += " AND d.timestamp <= ?"
             sql_params.append(before.isoformat())
 
+        if metadata:
+            clauses, meta_params = self._metadata_clauses(metadata, "d.")
+            if clauses:
+                query += " AND " + " AND ".join(clauses)
+                sql_params.extend(meta_params)
+
         query += " ORDER BY rank ASC, d.timestamp DESC LIMIT ?"
         sql_params.append(limit)
 
@@ -350,6 +392,7 @@ class StructuredStore:
         contact: str | None = None,
         after: datetime | None = None,
         before: datetime | None = None,
+        metadata: dict[str, str] | None = None,
         limit: int = 100,
     ) -> list[Document]:
         """Execute pure SQL query (no FTS)."""
@@ -372,6 +415,12 @@ class StructuredStore:
             query += " AND timestamp <= ?"
             params.append(before.isoformat())
 
+        if metadata:
+            clauses, meta_params = self._metadata_clauses(metadata, "")
+            if clauses:
+                query += " AND " + " AND ".join(clauses)
+                params.extend(meta_params)
+
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
 
@@ -379,6 +428,36 @@ class StructuredStore:
         rows = cursor.fetchall()
 
         return [self._row_to_document(row) for row in rows]
+
+    def _metadata_clauses(
+        self, metadata: dict[str, str], prefix: str
+    ) -> tuple[list[str], list[Any]]:
+        """Build SQL AND-clauses and params for metadata equality filters.
+
+        Declared indexed keys use a literal json_extract path so SQLite can use
+        the matching expression index (the key is a validated identifier, so the
+        interpolation is safe). Any other key uses a parameter-bound path, which
+        is injection-safe for arbitrary keys but not index-backed. ``prefix``
+        qualifies the column for joined queries (e.g. "d.").
+
+        Args:
+            metadata: Key/value equality filters.
+            prefix: Column-name prefix ("" or a table alias like "d.").
+
+        Returns:
+            A (clauses, params) pair, positionally aligned.
+        """
+        clauses: list[str] = []
+        params: list[Any] = []
+        for key, value in metadata.items():
+            if key in self.indexed_metadata_keys:
+                clauses.append(f"json_extract({prefix}metadata, '$.{key}') = ?")
+                params.append(value)
+            else:
+                clauses.append(f"json_extract({prefix}metadata, ?) = ?")
+                params.append(f"$.{key}")
+                params.append(value)
+        return clauses, params
 
     def _row_to_document(self, row: sqlite3.Row) -> Document:
         """Convert a database row back to a Document object."""
